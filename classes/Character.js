@@ -1,6 +1,7 @@
 
-const characterJSON = require("../data/characters.json");
-const weaponJSON    = require("../data/weapons.json");
+const Weapon = require("../classes/Weapon.js");
+
+const charactersJSON = require("../data/characters.json");
 
 class Character {
     
@@ -9,13 +10,13 @@ class Character {
      * @param {String} name - the name of the character this object will represent
      */
     constructor(name) {        
-        let data = characterJSON[name];
+        let data = charactersJSON[name];
         
         this.name       = name;
         this.weaponType = data["weapon-type"];
         this.movement   = data.movement;
         this.stats      = data.stats;
-        //this.weapon     = new Weapon();
+        this.weapon     = new Weapon(data.weapon, this.weaponType);
     }
     
 }

@@ -7,4 +7,6 @@ function main() {
     //let characters = [];
     
     let lyn = new Character("Lyn");
+    
+    console.log(lyn.weapon.name);
 }

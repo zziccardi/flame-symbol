@@ -1,5 +1,7 @@
 {
     "Lyn": {
+        "weapon-type": "sword",
+        "movement": "infantry",
         "stats": {
             "hp": 37,
             "attack": 28,
@@ -7,9 +9,6 @@
             "defense": 26,
             "resistance": 29
         },
-        "color": "red",
-        "weapon-type": "sword",
-        "movement": "infantry",
         "weapon": "Sol Katti"
     }
 }

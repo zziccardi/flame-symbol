@@ -1,14 +1,14 @@
 {
-    "Lyn": {
-        "weapon-type": "sword",
-        "movement": "infantry",
-        "stats": {
-            "hp": 37,
-            "attack": 28,
-            "speed": 37,
-            "defense": 26,
-            "resistance": 29
-        },
-        "weapon": "Sol Katti"
-    }
+  "Lyn": {
+    "weapon-type": "sword",
+    "movement": "infantry",
+    "stats": {
+      "hp": 37,
+      "attack": 28,
+      "speed": 37,
+      "defense": 26,
+      "resistance": 29
+    },
+    "weapon": "Sol Katti"
+  }
 }

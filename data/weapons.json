@@ -1,10 +1,10 @@
 {
-    "sword": [
-        {
-            "name": "Sol Katti",
-            "might": 16
-        }
-    ],
-    "lance": [],
-    "axe": []
+  "sword": [
+    {
+      "name": "Sol Katti",
+      "might": 16
+    }
+  ],
+  "lance": [],
+  "axe": []
 }

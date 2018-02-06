@@ -1,7 +1,7 @@
 
-const weaponsJSON = require("../data/weapons.json");
+import weaponsJSON from "../data/weapons.json";
 
-class Weapon {
+export default class Weapon {
     
     /**
      * Create a weapon by reading its data from the JSON file
@@ -26,5 +26,3 @@ class Weapon {
     }
     
 }
-
-module.exports = Weapon;

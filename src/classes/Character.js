@@ -1,9 +1,9 @@
 
-const Weapon = require("../classes/Weapon.js");
+import Weapon from "../classes/Weapon.js";
 
-const charactersJSON = require("../data/characters.json");
+import charactersJSON from "../data/characters.json";
 
-class Character {
+export default class Character {
     
     /**
      * Create a Character by reading its data from the JSON file
@@ -20,5 +20,3 @@ class Character {
     }
     
 }
-
-module.exports = Character;

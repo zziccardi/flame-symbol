@@ -74,7 +74,9 @@ const constants = {
     BOARDSIZE: 576,
     TILESIZE: 48,
     SCALE: 1.5,
-    NUM_TILES: 12
+    NUM_TILES: 12,
+    PIXEL_PER_FRAME: 8,
+    PIXEL_PER_HP: 3
 };
 
 /* harmony default export */ __webpack_exports__["a"] = (constants);
@@ -94,24 +96,26 @@ module.exports = {"Lyn":{"weapon-type":"sword","movement-type":"infantry","stats
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__classes_Character_js__ = __webpack_require__(3);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__classes_Tile_js__ = __webpack_require__(6);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__classes_Player1_js__ = __webpack_require__(7);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__classes_Player2_js__ = __webpack_require__(8);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__classes_Cursor_js__ = __webpack_require__(9);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__classes_Player_js__ = __webpack_require__(7);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__classes_Cursor_js__ = __webpack_require__(8);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__utilities_createKey_js__ = __webpack_require__(9);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__data_characters_json__ = __webpack_require__(1);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__data_characters_json___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_5__data_characters_json__);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__constants_js__ = __webpack_require__(0);
-// Import classes
 
 
 
 
 
 
-// Import JSON
 
 
-// Import constants
 
+
+
+
+// Let C9 know this is included in the HTML
+/* global PIXI */
 
 const Application  = PIXI.Application;
 const Container    = PIXI.Container;
@@ -124,32 +128,34 @@ const Text         = PIXI.Text;
 let app = null;
 let gameScene, gameOverScene, state;
 
-//Current Turn
-var turn = 1;
+// FIXME: Never used
+// Current Turn
+let turn = 1;
 
-//Text-related objects and styles
+// Text-related objects and styles
 let turnAndMovesMsgStyle, turnMessage, movesMessage;
 
-let cursor = new __WEBPACK_IMPORTED_MODULE_4__classes_Cursor_js__["a" /* default */]();
+// The cursor (the colored sprite that shows the user where they are selecting)
+let cursor = new __WEBPACK_IMPORTED_MODULE_3__classes_Cursor_js__["a" /* default */]();
 
 // List of characters, list appended to by reading JSON file
 let characters = [];
 
 // Create the players, may allow choosing team and yellow and green options later
-let player1 = new __WEBPACK_IMPORTED_MODULE_2__classes_Player1_js__["a" /* default */]([], "blue");
-let player2 = new __WEBPACK_IMPORTED_MODULE_3__classes_Player2_js__["a" /* default */]([], "red");
+let player1 = new __WEBPACK_IMPORTED_MODULE_2__classes_Player_js__["a" /* default */]([], "blue", 1);
+let player2 = new __WEBPACK_IMPORTED_MODULE_2__classes_Player_js__["a" /* default */]([], "red", 2);
 
 // Player whose turn it is
 let activePlayer = player1;
 
 let tiles = [];
 
-let leftKey  = createKey(37);
-let upKey    = createKey(38);
-let rightKey = createKey(39);
-let downKey  = createKey(40);
-let aKey     = createKey(65);
-let sKey     = createKey(83);
+let leftKey  = Object(__WEBPACK_IMPORTED_MODULE_4__utilities_createKey_js__["a" /* default */])(37);
+let upKey    = Object(__WEBPACK_IMPORTED_MODULE_4__utilities_createKey_js__["a" /* default */])(38);
+let rightKey = Object(__WEBPACK_IMPORTED_MODULE_4__utilities_createKey_js__["a" /* default */])(39);
+let downKey  = Object(__WEBPACK_IMPORTED_MODULE_4__utilities_createKey_js__["a" /* default */])(40);
+let aKey     = Object(__WEBPACK_IMPORTED_MODULE_4__utilities_createKey_js__["a" /* default */])(65);
+let sKey     = Object(__WEBPACK_IMPORTED_MODULE_4__utilities_createKey_js__["a" /* default */])(83);
 
 main();
 
@@ -232,65 +238,75 @@ function setup() {
         let player1Counter = 0;
         let player2Counter = 0;
         
+        let hpTextStyle = new TextStyle({
+            fontFamily: "Futura",
+            fontSize: 12,
+            fill: "white"
+        });
+        
         characters.forEach((char) => {
-            let messageStyle = new TextStyle({
-                fontFamily: "Futura",
-                fontSize: 12,
-                fill: "white"
-            });
-            
             //Values dependant on which team the character is on
-            var code;
-            var spacing;
-            var counter;
+            let code;
+            let spacing;
+            let counter;
             
             //Check the character's team
             if(player1.characters.includes(char)) {
-                code = 0x0000ff
+                code = 0x0000ff;
                 spacing = 50;
                 counter = player1Counter;
             }
             else {
-                code = 0xFF3300
-                spacing = 200;
+                code = 0xff0000;
+                spacing = 225;
                 counter = player2Counter;
             }
             
-            let characterName = new Text(char.name, messageStyle);
-            characterName.x = __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].BOARDSIZE+spacing
-            characterName.y = (counter*40)+10;
-            gameScene.addChild(characterName);
+            createHealthBar();
+            
+            //new HealthBar(char, constants.BOARDSIZE+spacing, (counter*40)+25);
             
             //Create the HP bar
-            let healthBar = new PIXI.DisplayObjectContainer();
-            healthBar.position.set(__WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].BOARDSIZE+spacing, (counter*40)+25)
-            gameScene.addChild(healthBar);
-
-            //Create the black background rectangle
-            let innerBar = new PIXI.Graphics();
-            innerBar.beginFill(0x000000);
-            innerBar.drawRect(0, 0, char.currentHP*3, 15);
-            innerBar.endFill();
-            healthBar.addChild(innerBar);
+            function createHealthBar() {
+                //Write the character's name above the HP Bar
+                let characterName = new Text(char.name, hpTextStyle);
+                characterName.x = __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].BOARDSIZE+spacing;
+                characterName.y = (counter*40)+10;
+                gameScene.addChild(characterName);
+            
+                //Create the HP bar
+                let healthBar = new PIXI.DisplayObjectContainer();
+                healthBar.position.set(__WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].BOARDSIZE+spacing, (counter*40)+25);
+                gameScene.addChild(healthBar);
     
-            //Create the front red rectangle
-            let outerBar = new PIXI.Graphics();
-            outerBar.beginFill(code);
-            outerBar.drawRect(0, 0, char.currentHP*3, 15);
-            outerBar.endFill();
-            healthBar.addChild(outerBar);
-    
-            healthBar.outer = outerBar;
-            
-            //Save the HP bar for later alteration
-            char.outerHPBar = healthBar.outer;
-            
-            let characterHP = new Text(`${char.currentHP} / ${char.stats.hp}`, messageStyle);
-            characterHP.x = __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].BOARDSIZE+spacing
-            characterHP.y = (counter*40)+25;
-            gameScene.addChild(characterHP);
-            
-            char.hpText = characterHP;
+                //Create the black background rectangle
+                let innerBar = new PIXI.Graphics();
+                innerBar.beginFill(0x000000);
+                innerBar.drawRect(0, 0, char.stats.hp*__WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].PIXEL_PER_HP, 15);
+                innerBar.endFill();
+                healthBar.addChild(innerBar);
+        
+                //Create the front red rectangle
+                let outerBar = new PIXI.Graphics();
+                outerBar.beginFill(code);
+                outerBar.drawRect(0, 0, char.stats.hp*__WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].PIXEL_PER_HP, 15);
+                outerBar.endFill();
+                healthBar.addChild(outerBar);
+        
+                //Save the bars into the character for later access
+                healthBar.outer = outerBar;
+                
+                //Save the HP bar for later alteration
+                char.outerHPBar = healthBar.outer;
+                
+                //Write a number over the hp bar to represent the numerical HP
+                let characterHP = new Text(`${char.currentHP} / ${char.stats.hp}`, hpTextStyle);
+                characterHP.x = __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].BOARDSIZE+spacing;
+                characterHP.y = (counter*40)+25;
+                gameScene.addChild(characterHP);
+                
+                char.hpText = characterHP;
+            }
             
             // Set the filename
             let fileName = char.name.toLowerCase();
@@ -306,20 +322,20 @@ function setup() {
             // Set the character on the grid based on their grid position from the character JSON
             if(player1.characters.includes(char)) {
                 sprite.position.set(
-                    player1.characterCoordinates[player1Counter].x * __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE, 
-                    player1.characterCoordinates[player1Counter].y * __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE
+                    player1.characterCoordinates1[player1Counter].x * __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE, 
+                    player1.characterCoordinates1[player1Counter].y * __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE
                 );
                 // Update the character's position
-                char.position = player1.characterCoordinates[player1Counter];
+                char.position = player1.characterCoordinates1[player1Counter];
                 player1Counter++;
             }
             else {
                 sprite.position.set(
-                    player2.characterCoordinates[player2Counter].x * __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE, 
-                    player2.characterCoordinates[player2Counter].y * __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE
+                    player2.characterCoordinates2[player2Counter].x * __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE, 
+                    player2.characterCoordinates2[player2Counter].y * __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE
                 );
                 // Update the character's position
-                char.position = player2.characterCoordinates[player2Counter];
+                char.position = player2.characterCoordinates2[player2Counter];
                 player2Counter++;
             }
             
@@ -420,6 +436,42 @@ function gameOver() {
 }
 
 function play() {
+    
+    if(cursor.spriteMoving) {
+        //If no more tiles to move, stop movement
+        if(!cursor.spritePath[0]) {
+            cursor.spriteMoving = false;
+        }
+        else if(cursor.movedInSprite !== __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE) {
+            cursor.selectedCharacter.sprite.position.x += cursor.spritePath[0].x;
+            cursor.selectedCharacter.sprite.position.y += cursor.spritePath[0].y;
+            cursor.movedInSprite += __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].PIXEL_PER_FRAME;
+        }
+        else{
+            cursor.movedInSprite = 0;
+            cursor.spritePath.splice(0, 1);
+            
+        }
+    }
+    
+    //SCROLLING HP STUFF CURRENTLY BROKEN
+    // let characterToScrollHp;
+    // for(let i=0; i < characters.length; i++) {
+    //     if(characters[i].hpIsScrolling) {characterToScrollHp = characters[i];}
+    //     console.log(characterToScrollHp);
+    // }
+    // if(characterToScrollHp) {
+    //     if(characterToScrollHp.scrollingHP === characterToScrollHp.currentHP) {
+    //         characterToScrollHp.hpIsScrolling = false;
+    //     }
+    //     else {
+    //         characterToScrollHp.outerHPBar.width -= constants.PIXEL_PER_HP;
+    //         characterToScrollHp.hpText--;
+    //         characterToScrollHp.scrollingHP -= constants.PIXEL_PER_HP
+    //     }
+        
+    // }
+    
     // If either player runs out of characters, the game is over, so update the state
     if (!player1.characters[0] || !player2.characters[0]) {
         state = gameOver;
@@ -463,18 +515,25 @@ function play() {
     
 }
 
+function changeMovementText() {
+    movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
+}
+
 downKey.press = () => {
     if(cursor.currentSprite === cursor.targetSprite) {
         return;
     }
     
-    if (cursor.position.y < __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].NUM_TILES-1 && (cursor.distanceLeft > 0 || cursor.isSelected == false)) {
+    if (cursor.position.y < __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].NUM_TILES-1 && (cursor.distanceLeft > 0 || cursor.isSelected === false)) {
         cursor.currentSprite.y   += __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE;
         cursor.position.y        += 1;
-        cursor.distanceLeft--;
     }
     
-    if (cursor.isSelected) movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
+    if(cursor.isSelected && cursor.distanceLeft > 0) {
+        cursor.distanceLeft--;
+        cursor.spritePath.push({x:0, y:__WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].PIXEL_PER_FRAME})
+        changeMovementText();
+    }
 };
 
 upKey.press = () => {
@@ -482,16 +541,19 @@ upKey.press = () => {
         return;
     }
     
-    if (cursor.position.y > 0 && (cursor.distanceLeft > 0 || cursor.isSelected == false)) {
+    if (cursor.position.y > 0 && (cursor.distanceLeft > 0 || cursor.isSelected === false)) {
         cursor.currentSprite.y   -= __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE;
         cursor.position.y        -= 1;
-        cursor.distanceLeft--;
         
         //movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
     }
     
-    if(cursor.isSelected) movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
-}
+    if(cursor.isSelected && cursor.distanceLeft > 0) {
+        cursor.distanceLeft--;
+        cursor.spritePath.push({x:0, y:-__WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].PIXEL_PER_FRAME})
+        changeMovementText();
+    }
+};
 
 leftKey.press = () => {
     if(cursor.position.x > 0 && cursor.currentSprite === cursor.targetSprite) {
@@ -508,15 +570,19 @@ leftKey.press = () => {
         return;
     }
     
-    if (cursor.position.x > 0 && (cursor.distanceLeft > 0 || cursor.isSelected == false)) {
+    if (cursor.position.x > 0 && (cursor.distanceLeft > 0 || cursor.isSelected === false)) {
         cursor.currentSprite.x  -= __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE;
         cursor.position.x       -= 1;
-        cursor.distanceLeft--;
         
         //movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
     }
     
-    if(cursor.isSelected) movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
+    
+    if(cursor.isSelected && cursor.distanceLeft > 0) {
+        cursor.distanceLeft--;
+        cursor.spritePath.push({x:-__WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].PIXEL_PER_FRAME, y:0})
+        changeMovementText();
+    }
 };
 
 rightKey.press = () => {
@@ -534,15 +600,18 @@ rightKey.press = () => {
         return;
     }
     
-    if (cursor.position.x < __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].NUM_TILES-1 && (cursor.distanceLeft > 0 || cursor.isSelected == false)) {
+    if (cursor.position.x < __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].NUM_TILES-1 && (cursor.distanceLeft > 0 || cursor.isSelected === false)) {
         cursor.currentSprite.x   += __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE;
         cursor.position.x        += 1;
-        cursor.distanceLeft--;
         
         //movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
     }
     
-    if(cursor.isSelected) movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
+    if(cursor.isSelected && cursor.distanceLeft > 0) {
+        cursor.distanceLeft--;
+        cursor.spritePath.push({x:__WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].PIXEL_PER_FRAME, y:0})
+        changeMovementText();
+    }
 };
 
 aKey.press = () => {
@@ -575,8 +644,10 @@ aKey.press = () => {
                 }
             }
             
+            
             recipient.sprite.destroy();
             
+            // Is this necessary too?
             gameScene.removeChild(recipient.sprite);
             
             tiles[cursor.position.x][cursor.position.y].character = null;
@@ -593,8 +664,10 @@ aKey.press = () => {
                 }
             }
             
+            
             initiator.sprite.destroy();
             
+            // Is this necessary too?
             gameScene.removeChild(initiator.sprite);
             
             tiles[initiator.position.x][initiator.position.y] = null;
@@ -610,21 +683,12 @@ aKey.press = () => {
             cursor.position.y * __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE
         );
         
-        // // TODO :: FIX ME!!! Need to make sure that if character dies, the correct player turn message
-        // // is printed
+        // FIXME: Need to make sure that if character dies, the correct player turn message
+        // is printed
         // if(currentTile.character === null) {
         //     turnMessage.text = "Player 2's turn!"
         // }
-        // else {
-        //     if(currentTile.character.playerNumber == 2) {
-        //         turnMessage.text = "Player 2's turn!"
-        //     }
-        //     else {
-        //         turnMessage.text = "Player 1's turn!"
-        //     }
-        // }
-        
-        // *********************************************************************
+
         // Check each character the active player has
         // If all characters have moved, it is time to switch turns
         let allCharactersMoved = true;
@@ -637,17 +701,17 @@ aKey.press = () => {
         }
         
         if(allCharactersMoved) {
-            // TODO :: FIX ME!!! Need to make sure that if character dies, the correct player turn message
+            // FIXME: Need to make sure that if character dies, the correct player turn message
             // is printed
             if(currentTile.character === null) {
-                turnMessage.text = "Player 2's turn!"
+                turnMessage.text = "Player 2's turn!";
             }
             else {
                 if(currentTile.character.playerNumber == 1) {
-                    turnMessage.text = "Player 2's turn!"
+                    turnMessage.text = "Player 2's turn!";
                 }
                 else {
-                    turnMessage.text = "Player 1's turn!"
+                    turnMessage.text = "Player 1's turn!";
                 }
             }
         }
@@ -746,14 +810,6 @@ aKey.press = () => {
             return;
         }
         
-        // if(currentTile.character.playerNumber == 1) {
-        //     turnMessage.text = "Player 2's turn!"
-        // }
-        // else {
-        //     turnMessage.text = "Player 1's turn!"
-        // }
-        
-        // *********************************************************************
         // Check each character the active player has
         // If all characters have moved, it is time to switch turns
         let allCharactersMoved = true;
@@ -769,14 +825,14 @@ aKey.press = () => {
             // TODO :: FIX ME!!! Need to make sure that if character dies, the correct player turn message
             // is printed
             if(currentTile.character === null) {
-                turnMessage.text = "Player 2's turn!"
+                turnMessage.text = "Player 2's turn!";
             }
             else {
                 if(currentTile.character.playerNumber == 1) {
-                    turnMessage.text = "Player 2's turn!"
+                    turnMessage.text = "Player 2's turn!";
                 }
                 else {
-                    turnMessage.text = "Player 1's turn!"
+                    turnMessage.text = "Player 1's turn!";
                 }
             }
         }
@@ -826,42 +882,6 @@ sKey.press = () => {
     movesMessage.text = "Moves remaining:";
 };
 
-// From https://github.com/kittykatattack/learningPixi#keyboard
-function createKey(keyCode) {
-    let key = {};
-    key.code = keyCode;
-    key.isDown = false;
-    key.isUp = true;
-    key.press = null;
-    key.release = null;
-    
-    // The `downHandler`
-    key.downHandler = event => {
-        if (event.keyCode === key.code) {
-            if (key.isUp && key.press) key.press();
-            key.isDown = true;
-            key.isUp = false;
-        }
-        event.preventDefault();
-    };
-
-    // The `upHandler`
-    key.upHandler = event => {
-        if (event.keyCode === key.code) {
-            if (key.isDown && key.release) key.release();
-            key.isDown = false;
-            key.isUp = true;
-        }
-        event.preventDefault();
-    };
-
-    // Attach event listeners
-    window.addEventListener("keydown", key.downHandler.bind(key), false);
-    window.addEventListener("keyup", key.upHandler.bind(key), false);
-    
-    return key;
-}
-
 
 /***/ }),
 /* 3 */
@@ -872,6 +892,7 @@ function createKey(keyCode) {
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__data_characters_json__ = __webpack_require__(1);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__data_characters_json___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__data_characters_json__);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__constants_js__ = __webpack_require__(0);
+
 
 
 
@@ -916,8 +937,13 @@ class Character {
             this.movement = 6;
         }
         
+        this.hpIsScrolling = false;
+        
         this.outerHPBar = null;
         this.hpText = null;
+        
+        this.scrollingHP = this.currentHP;
+        
     }
     
     /**
@@ -927,12 +953,13 @@ class Character {
      */
     move(cursor) {
         // Move the character based on where the cursor currently is
-        this.sprite.position.set(
-            cursor.position.x * __WEBPACK_IMPORTED_MODULE_2__constants_js__["a" /* default */].TILESIZE,
-            cursor.position.y * __WEBPACK_IMPORTED_MODULE_2__constants_js__["a" /* default */].TILESIZE
-        );
+        //this.sprite.position.set(
+        //    cursor.position.x * constants.TILESIZE,
+        //    cursor.position.y * constants.TILESIZE
+        //);
         
         this.hasMoved = true;
+        cursor.spriteMoving = true;
         this.position.x = cursor.position.x;
         this.position.y = cursor.position.y;
         
@@ -945,38 +972,58 @@ class Character {
      * @param {Character} recipient - the other player's unit who is being attacked
      */
     attack(recipient) {
+        console.log(`${this.name} initiates on ${recipient.name}`);
+        
         // 1. Initiate on opponent
-        let status = this.doAttackCalculations(this, recipient);
+        let status = this.doAttackCalculations(recipient);
         
         // The recipient dies, so end combat
         if (status === "recipient dies") {
             return status;
         }
         
+        //this.hpIsScrolling = true;;
+        //while(this.hpIsScrolling) {}
+        
+        console.log(`${recipient.name} counterattacks ${this.name}`);
+        
         // 2. Opponent counterattacks
-        status = this.doAttackCalculations(recipient, this);
+        status = recipient.doAttackCalculations(this);
         
         // The initiator was killed on the recipient's counterattack, so end combat
         if (status === "recipient dies") {
             return "initiator dies";
         }
         
+        
+        
+        
         // 3. If the initiator is significantly faster than the recipient, the
         // former does a follow-up attack
         if (this.stats.speed - recipient.stats.speed >= 5) {
-            return this.doAttackCalculations(this, recipient);
+            console.log(`${this.name} performs a follow-up attack on ${recipient.name}`);
+            
+            return this.doAttackCalculations(recipient);
+        }
+        // 4. If the recipient is significantly faster than the initiator, the
+        // former does a second (follow-up) counterattack
+        else if (recipient.stats.speed - this.stats.speed >= 5) {
+            console.log(`${recipient.name} performs a follow-up counterattack on ${this.name}`);
+            
+            return recipient.doAttackCalculations(this);
         }
     }
     
     /**
      * Determine the damage to be dealt and subtract it from the opponent's HP
-     * @param {Character} initiator - the character that initiates the attack
      * @param {Character} recipient - the character that receives the attack
+     * @return {String} status - a string indicating whether the recpient dies,
+     * or null otherwise
      * @private
      */
-    doAttackCalculations(initiator, recipient) {
+    doAttackCalculations(recipient) {
         // Add the weapon's might to this character's attack
-        let attackStrength = initiator.stats.attack + initiator.weapon.might;
+        let attackStrength = this.stats.attack + this.weapon.might;
         
         console.log("Attack strength: " + attackStrength);
         
@@ -984,7 +1031,7 @@ class Character {
         
         console.log("Attack strength with multiplier: " + attackStrength);
         
-        // TODO: Handle magic attacks
+        // TODO: Handle magic and ranged attacks
         
         // Subtract the opponent's defense from the damage to determine how much
         // to lower the opponent's HP
@@ -994,20 +1041,31 @@ class Character {
         
         // The recipient's defense is high enough that no damage is dealt
         if (damage <= 0) {
-            return;
+            return null;
         }
         
         recipient.currentHP -= damage;
         
-        //Decrease health bar
-        recipient.outerHPBar.width = recipient.currentHP * 3;
+        // If a character's hp goes below 0, set it to 0 for HP bar purposes
+        if (recipient.currentHP < 0) {
+            recipient.currentHP = 0;
+        }
+        
+        // TODO: Move the following two lines to a new method in a class that
+        // manages the health bars so that this function only deals with doing
+        // attack calculations
+        
+        // Decrease health bar
+        recipient.outerHPBar.width = recipient.currentHP * __WEBPACK_IMPORTED_MODULE_2__constants_js__["a" /* default */].PIXEL_PER_HP;
         recipient.hpText.text = `${recipient.currentHP} / ${recipient.stats.hp}`
         
         console.log("Recipient HP: " + recipient.currentHP);
         
-        if (recipient.currentHP <= 0) {
+        if (recipient.currentHP === 0) {
             return "recipient dies";
         }
+        
+        return null;
     }
     
     /**
@@ -1110,55 +1168,56 @@ class Tile {
 // Import constants
 
 
-class Player1 {
+class Player {
     
-    constructor(characters, color) {
-        this.playerNumber = 1;
+    constructor(characters, color, playerNumber) {
+        this.playerNumber = playerNumber;
         this.characters = characters;
         this.color = color;
         
-        this.characterCoordinates = [
+        //Starting positions for Player 1's characters
+        this.characterCoordinates1 = [
             {x : 0, y : 0},
             {x : 2, y : 0},
             {x : 1, y : 1},
             {x : 0, y : 2},
             {x : 2, y : 2}
         ]
-    }
-}
-/* harmony export (immutable) */ __webpack_exports__["a"] = Player1;
-
-
-/***/ }),
-/* 8 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__constants_js__ = __webpack_require__(0);
-// Import constants
-
-
-class Player2 {
-    
-    constructor(characters, color) {
-        this.playerNumber = 2;
-        this.characters = characters;
-        this.color = color;
         
-        this.characterCoordinates = [
+        //Starting positions for Player 2's characters
+        this.characterCoordinates2 = [
             {x : __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].NUM_TILES-1, y : __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].NUM_TILES-1},
             {x : __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].NUM_TILES-3, y : __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].NUM_TILES-1},
             {x : __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].NUM_TILES-2, y : __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].NUM_TILES-2},
             {x : __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].NUM_TILES-1, y : __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].NUM_TILES-3},
             {x : __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].NUM_TILES-3, y : __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].NUM_TILES-3}
         ]
+        
+        //Starting positions for Player 3's characters
+        this.characterCoordinates3 = [
+            {x : 0, y : __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].NUM_TILES-1},
+            {x : 2, y : __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].NUM_TILES-1},
+            {x : 1, y : __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].NUM_TILES-2},
+            {x : 0, y : __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].NUM_TILES-3},
+            {x : 2, y : __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].NUM_TILES-3}
+        ]
+        
+        //Starting positions for Player 4's characters
+        this.characterCoordinates4 = [
+            {x : 0, y : __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].NUM_TILES-1},
+            {x : 2, y : __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].NUM_TILES-1},
+            {x : 1, y : __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].NUM_TILES-2},
+            {x : 0, y : __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].NUM_TILES-3},
+            {x : 2, y : __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].NUM_TILES-3}
+        ]
+        
     }
 }
-/* harmony export (immutable) */ __webpack_exports__["a"] = Player2;
+/* harmony export (immutable) */ __webpack_exports__["a"] = Player;
 
 
 /***/ }),
-/* 9 */
+/* 8 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -1187,6 +1246,10 @@ class Cursor {
         
         this.targetArray = [];
         this.targetArrayIndex = 0;
+        
+        this.spritePath = [];
+        this.movedInSprite = 0;
+        this.spriteMoving = false;
     }
     
     toggleSprites() {
@@ -1204,6 +1267,50 @@ class Cursor {
 }
 /* harmony export (immutable) */ __webpack_exports__["a"] = Cursor;
 
+
+
+/***/ }),
+/* 9 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+/* harmony export (immutable) */ __webpack_exports__["a"] = createKey;
+
+// From https://github.com/kittykatattack/learningPixi#keyboard
+function createKey(keyCode) {
+    let key = {};
+    key.code = keyCode;
+    key.isDown = false;
+    key.isUp = true;
+    key.press = null;
+    key.release = null;
+    
+    // The `downHandler`
+    key.downHandler = event => {
+        if (event.keyCode === key.code) {
+            if (key.isUp && key.press) key.press();
+            key.isDown = true;
+            key.isUp = false;
+        }
+        event.preventDefault();
+    };
+
+    // The `upHandler`
+    key.upHandler = event => {
+        if (event.keyCode === key.code) {
+            if (key.isDown && key.release) key.release();
+            key.isDown = false;
+            key.isUp = true;
+        }
+        event.preventDefault();
+    };
+
+    // Attach event listeners
+    window.addEventListener("keydown", key.downHandler.bind(key), false);
+    window.addEventListener("keyup", key.upHandler.bind(key), false);
+    
+    return key;
+}
 
 
 /***/ })

@@ -22,6 +22,10 @@ export default class Cursor {
         
         this.targetArray = [];
         this.targetArrayIndex = 0;
+        
+        this.spritePath = [];
+        this.movedInSprite = 0;
+        this.spriteMoving = false;
     }
     
     toggleSprites() {

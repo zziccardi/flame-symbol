@@ -1,15 +1,17 @@
-// Import classes
+
 import Character from "./classes/Character.js";
 import Tile      from "./classes/Tile.js";
-import Player1   from "./classes/Player1.js";
-import Player2   from "./classes/Player2.js";
+import Player    from "./classes/Player.js";
 import Cursor    from "./classes/Cursor.js";
 
-// Import JSON
+import createKey from "./utilities/createKey.js";
+
 import charactersJSON from "./data/characters.json";
 
-// Import constants
 import constants from "./constants.js";
+
+// Let C9 know this is included in the HTML
+/* global PIXI */
 
 const Application  = PIXI.Application;
 const Container    = PIXI.Container;
@@ -22,20 +24,22 @@ const Text         = PIXI.Text;
 let app = null;
 let gameScene, gameOverScene, state;
 
-//Current Turn
-var turn = 1;
+// FIXME: Never used
+// Current Turn
+let turn = 1;
 
-//Text-related objects and styles
+// Text-related objects and styles
 let turnAndMovesMsgStyle, turnMessage, movesMessage;
 
+// The cursor (the colored sprite that shows the user where they are selecting)
 let cursor = new Cursor();
 
 // List of characters, list appended to by reading JSON file
 let characters = [];
 
 // Create the players, may allow choosing team and yellow and green options later
-let player1 = new Player1([], "blue");
-let player2 = new Player2([], "red");
+let player1 = new Player([], "blue", 1);
+let player2 = new Player([], "red", 2);
 
 // Player whose turn it is
 let activePlayer = player1;
@@ -130,65 +134,75 @@ function setup() {
         let player1Counter = 0;
         let player2Counter = 0;
         
+        let hpTextStyle = new TextStyle({
+            fontFamily: "Futura",
+            fontSize: 12,
+            fill: "white"
+        });
+        
         characters.forEach((char) => {
-            let messageStyle = new TextStyle({
-                fontFamily: "Futura",
-                fontSize: 12,
-                fill: "white"
-            });
-            
             //Values dependant on which team the character is on
-            var code;
-            var spacing;
-            var counter;
+            let code;
+            let spacing;
+            let counter;
             
             //Check the character's team
-            if(player1.characters.includes(char)) {
-                code = 0x0000ff
+            if(char.playerNumber === 1) {
+                code = 0x0000ff;
                 spacing = 50;
                 counter = player1Counter;
             }
             else {
-                code = 0xFF3300
-                spacing = 200;
+                code = 0xff0000;
+                spacing = 225;
                 counter = player2Counter;
             }
             
-            let characterName = new Text(char.name, messageStyle);
-            characterName.x = constants.BOARDSIZE+spacing
-            characterName.y = (counter*40)+10;
-            gameScene.addChild(characterName);
+            createHealthBar();
+            
+            //new HealthBar(char, constants.BOARDSIZE+spacing, (counter*40)+25);
             
             //Create the HP bar
-            let healthBar = new PIXI.DisplayObjectContainer();
-            healthBar.position.set(constants.BOARDSIZE+spacing, (counter*40)+25)
-            gameScene.addChild(healthBar);
-
-            //Create the black background rectangle
-            let innerBar = new PIXI.Graphics();
-            innerBar.beginFill(0x000000);
-            innerBar.drawRect(0, 0, char.currentHP*3, 15);
-            innerBar.endFill();
-            healthBar.addChild(innerBar);
+            function createHealthBar() {
+                //Write the character's name above the HP Bar
+                let characterName = new Text(char.name, hpTextStyle);
+                characterName.x = constants.BOARDSIZE+spacing;
+                characterName.y = (counter*40)+10;
+                gameScene.addChild(characterName);
+            
+                //Create the HP bar
+                let healthBar = new PIXI.DisplayObjectContainer();
+                healthBar.position.set(constants.BOARDSIZE+spacing, (counter*40)+25);
+                gameScene.addChild(healthBar);
     
-            //Create the front red rectangle
-            let outerBar = new PIXI.Graphics();
-            outerBar.beginFill(code);
-            outerBar.drawRect(0, 0, char.currentHP*3, 15);
-            outerBar.endFill();
-            healthBar.addChild(outerBar);
-    
-            healthBar.outer = outerBar;
-            
-            //Save the HP bar for later alteration
-            char.outerHPBar = healthBar.outer;
-            
-            let characterHP = new Text(`${char.currentHP} / ${char.stats.hp}`, messageStyle);
-            characterHP.x = constants.BOARDSIZE+spacing
-            characterHP.y = (counter*40)+25;
-            gameScene.addChild(characterHP);
-            
-            char.hpText = characterHP;
+                //Create the black background rectangle
+                let innerBar = new PIXI.Graphics();
+                innerBar.beginFill(0x000000);
+                innerBar.drawRect(0, 0, char.stats.hp*constants.PIXEL_PER_HP, 15);
+                innerBar.endFill();
+                healthBar.addChild(innerBar);
+        
+                //Create the front red rectangle
+                let outerBar = new PIXI.Graphics();
+                outerBar.beginFill(code);
+                outerBar.drawRect(0, 0, char.stats.hp*constants.PIXEL_PER_HP, 15);
+                outerBar.endFill();
+                healthBar.addChild(outerBar);
+        
+                //Save the bars into the character for later access
+                healthBar.outer = outerBar;
+                
+                //Save the HP bar for later alteration
+                char.outerHPBar = healthBar.outer;
+                
+                //Write a number over the hp bar to represent the numerical HP
+                let characterHP = new Text(`${char.currentHP} / ${char.stats.hp}`, hpTextStyle);
+                characterHP.x = constants.BOARDSIZE+spacing;
+                characterHP.y = (counter*40)+25;
+                gameScene.addChild(characterHP);
+                
+                char.hpText = characterHP;
+            }
             
             // Set the filename
             let fileName = char.name.toLowerCase();
@@ -202,22 +216,22 @@ function setup() {
             let sprite = new Sprite(spritesheet[fileName]);
             
             // Set the character on the grid based on their grid position from the character JSON
-            if(player1.characters.includes(char)) {
+            if(char.playerNumber === 1) {
                 sprite.position.set(
-                    player1.characterCoordinates[player1Counter].x * constants.TILESIZE, 
-                    player1.characterCoordinates[player1Counter].y * constants.TILESIZE
+                    player1.characterCoordinates1[player1Counter].x * constants.TILESIZE, 
+                    player1.characterCoordinates1[player1Counter].y * constants.TILESIZE
                 );
                 // Update the character's position
-                char.position = player1.characterCoordinates[player1Counter];
+                char.position = player1.characterCoordinates1[player1Counter];
                 player1Counter++;
             }
             else {
                 sprite.position.set(
-                    player2.characterCoordinates[player2Counter].x * constants.TILESIZE, 
-                    player2.characterCoordinates[player2Counter].y * constants.TILESIZE
+                    player2.characterCoordinates2[player2Counter].x * constants.TILESIZE, 
+                    player2.characterCoordinates2[player2Counter].y * constants.TILESIZE
                 );
                 // Update the character's position
-                char.position = player2.characterCoordinates[player2Counter];
+                char.position = player2.characterCoordinates2[player2Counter];
                 player2Counter++;
             }
             
@@ -318,6 +332,42 @@ function gameOver() {
 }
 
 function play() {
+    
+    if(cursor.spriteMoving) {
+        //If no more tiles to move, stop movement
+        if(!cursor.spritePath[0]) {
+            cursor.spriteMoving = false;
+        }
+        else if(cursor.movedInSprite !== constants.TILESIZE) {
+            cursor.selectedCharacter.sprite.position.x += cursor.spritePath[0].x;
+            cursor.selectedCharacter.sprite.position.y += cursor.spritePath[0].y;
+            cursor.movedInSprite += constants.PIXEL_PER_FRAME;
+        }
+        else{
+            cursor.movedInSprite = 0;
+            cursor.spritePath.splice(0, 1);
+            
+        }
+    }
+    
+    //SCROLLING HP STUFF CURRENTLY BROKEN
+    // let characterToScrollHp;
+    // for(let i=0; i < characters.length; i++) {
+    //     if(characters[i].hpIsScrolling) {characterToScrollHp = characters[i];}
+    //     console.log(characterToScrollHp);
+    // }
+    // if(characterToScrollHp) {
+    //     if(characterToScrollHp.scrollingHP === characterToScrollHp.currentHP) {
+    //         characterToScrollHp.hpIsScrolling = false;
+    //     }
+    //     else {
+    //         characterToScrollHp.outerHPBar.width -= constants.PIXEL_PER_HP;
+    //         characterToScrollHp.hpText--;
+    //         characterToScrollHp.scrollingHP -= constants.PIXEL_PER_HP
+    //     }
+        
+    // }
+    
     // If either player runs out of characters, the game is over, so update the state
     if (!player1.characters[0] || !player2.characters[0]) {
         state = gameOver;
@@ -361,18 +411,25 @@ function play() {
     
 }
 
+function changeMovementText() {
+    movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
+}
+
 downKey.press = () => {
     if(cursor.currentSprite === cursor.targetSprite) {
         return;
     }
     
-    if (cursor.position.y < constants.NUM_TILES-1 && (cursor.distanceLeft > 0 || cursor.isSelected == false)) {
+    if (cursor.position.y < constants.NUM_TILES-1 && (cursor.distanceLeft > 0 || cursor.isSelected === false)) {
         cursor.currentSprite.y   += constants.TILESIZE;
         cursor.position.y        += 1;
-        cursor.distanceLeft--;
     }
     
-    if (cursor.isSelected) movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
+    if(cursor.isSelected && cursor.distanceLeft > 0) {
+        cursor.distanceLeft--;
+        cursor.spritePath.push({x:0, y:constants.PIXEL_PER_FRAME})
+        changeMovementText();
+    }
 };
 
 upKey.press = () => {
@@ -380,16 +437,19 @@ upKey.press = () => {
         return;
     }
     
-    if (cursor.position.y > 0 && (cursor.distanceLeft > 0 || cursor.isSelected == false)) {
+    if (cursor.position.y > 0 && (cursor.distanceLeft > 0 || cursor.isSelected === false)) {
         cursor.currentSprite.y   -= constants.TILESIZE;
         cursor.position.y        -= 1;
-        cursor.distanceLeft--;
         
         //movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
     }
     
-    if(cursor.isSelected) movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
-}
+    if(cursor.isSelected && cursor.distanceLeft > 0) {
+        cursor.distanceLeft--;
+        cursor.spritePath.push({x:0, y:-constants.PIXEL_PER_FRAME})
+        changeMovementText();
+    }
+};
 
 leftKey.press = () => {
     if(cursor.position.x > 0 && cursor.currentSprite === cursor.targetSprite) {
@@ -406,15 +466,19 @@ leftKey.press = () => {
         return;
     }
     
-    if (cursor.position.x > 0 && (cursor.distanceLeft > 0 || cursor.isSelected == false)) {
+    if (cursor.position.x > 0 && (cursor.distanceLeft > 0 || cursor.isSelected === false)) {
         cursor.currentSprite.x  -= constants.TILESIZE;
         cursor.position.x       -= 1;
-        cursor.distanceLeft--;
         
         //movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
     }
     
-    if(cursor.isSelected) movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
+    
+    if(cursor.isSelected && cursor.distanceLeft > 0) {
+        cursor.distanceLeft--;
+        cursor.spritePath.push({x:-constants.PIXEL_PER_FRAME, y:0})
+        changeMovementText();
+    }
 };
 
 rightKey.press = () => {
@@ -432,15 +496,18 @@ rightKey.press = () => {
         return;
     }
     
-    if (cursor.position.x < constants.NUM_TILES-1 && (cursor.distanceLeft > 0 || cursor.isSelected == false)) {
+    if (cursor.position.x < constants.NUM_TILES-1 && (cursor.distanceLeft > 0 || cursor.isSelected === false)) {
         cursor.currentSprite.x   += constants.TILESIZE;
         cursor.position.x        += 1;
-        cursor.distanceLeft--;
         
         //movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
     }
     
-    if(cursor.isSelected) movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
+    if(cursor.isSelected && cursor.distanceLeft > 0) {
+        cursor.distanceLeft--;
+        cursor.spritePath.push({x:constants.PIXEL_PER_FRAME, y:0})
+        changeMovementText();
+    }
 };
 
 aKey.press = () => {
@@ -473,7 +540,6 @@ aKey.press = () => {
                 }
             }
             
-            // TODO: Remove healthbar
             
             recipient.sprite.destroy();
             
@@ -494,7 +560,6 @@ aKey.press = () => {
                 }
             }
             
-            // TODO: Remove healthbar
             
             initiator.sprite.destroy();
             
@@ -514,21 +579,12 @@ aKey.press = () => {
             cursor.position.y * constants.TILESIZE
         );
         
-        // // TODO :: FIX ME!!! Need to make sure that if character dies, the correct player turn message
-        // // is printed
+        // FIXME: Need to make sure that if character dies, the correct player turn message
+        // is printed
         // if(currentTile.character === null) {
         //     turnMessage.text = "Player 2's turn!"
         // }
-        // else {
-        //     if(currentTile.character.playerNumber == 2) {
-        //         turnMessage.text = "Player 2's turn!"
-        //     }
-        //     else {
-        //         turnMessage.text = "Player 1's turn!"
-        //     }
-        // }
-        
-        // *********************************************************************
+
         // Check each character the active player has
         // If all characters have moved, it is time to switch turns
         let allCharactersMoved = true;
@@ -541,17 +597,17 @@ aKey.press = () => {
         }
         
         if(allCharactersMoved) {
-            // TODO :: FIX ME!!! Need to make sure that if character dies, the correct player turn message
+            // FIXME: Need to make sure that if character dies, the correct player turn message
             // is printed
             if(currentTile.character === null) {
-                turnMessage.text = "Player 2's turn!"
+                turnMessage.text = "Player 2's turn!";
             }
             else {
                 if(currentTile.character.playerNumber == 1) {
-                    turnMessage.text = "Player 2's turn!"
+                    turnMessage.text = "Player 2's turn!";
                 }
                 else {
-                    turnMessage.text = "Player 1's turn!"
+                    turnMessage.text = "Player 1's turn!";
                 }
             }
         }
@@ -650,14 +706,6 @@ aKey.press = () => {
             return;
         }
         
-        // if(currentTile.character.playerNumber == 1) {
-        //     turnMessage.text = "Player 2's turn!"
-        // }
-        // else {
-        //     turnMessage.text = "Player 1's turn!"
-        // }
-        
-        // *********************************************************************
         // Check each character the active player has
         // If all characters have moved, it is time to switch turns
         let allCharactersMoved = true;
@@ -673,14 +721,14 @@ aKey.press = () => {
             // TODO :: FIX ME!!! Need to make sure that if character dies, the correct player turn message
             // is printed
             if(currentTile.character === null) {
-                turnMessage.text = "Player 2's turn!"
+                turnMessage.text = "Player 2's turn!";
             }
             else {
                 if(currentTile.character.playerNumber == 1) {
-                    turnMessage.text = "Player 2's turn!"
+                    turnMessage.text = "Player 2's turn!";
                 }
                 else {
-                    turnMessage.text = "Player 1's turn!"
+                    turnMessage.text = "Player 1's turn!";
                 }
             }
         }
@@ -729,39 +777,3 @@ sKey.press = () => {
     
     movesMessage.text = "Moves remaining:";
 };
-
-// From https://github.com/kittykatattack/learningPixi#keyboard
-function createKey(keyCode) {
-    let key = {};
-    key.code = keyCode;
-    key.isDown = false;
-    key.isUp = true;
-    key.press = null;
-    key.release = null;
-    
-    // The `downHandler`
-    key.downHandler = event => {
-        if (event.keyCode === key.code) {
-            if (key.isUp && key.press) key.press();
-            key.isDown = true;
-            key.isUp = false;
-        }
-        event.preventDefault();
-    };
-
-    // The `upHandler`
-    key.upHandler = event => {
-        if (event.keyCode === key.code) {
-            if (key.isDown && key.release) key.release();
-            key.isDown = false;
-            key.isUp = true;
-        }
-        event.preventDefault();
-    };
-
-    // Attach event listeners
-    window.addEventListener("keydown", key.downHandler.bind(key), false);
-    window.addEventListener("keyup", key.upHandler.bind(key), false);
-    
-    return key;
-}

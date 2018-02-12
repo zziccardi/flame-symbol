@@ -4,7 +4,9 @@ const constants = {
     BOARDSIZE: 576,
     TILESIZE: 48,
     SCALE: 1.5,
-    NUM_TILES: 12
+    NUM_TILES: 12,
+    PIXEL_PER_FRAME: 8,
+    PIXEL_PER_HP: 3
 };
 
 export default constants;

@@ -5,6 +5,7 @@ import charactersJSON from "../data/characters.json";
 
 import constants from "../constants.js";
 
+
 export default class Character {
     
     /**
@@ -42,8 +43,13 @@ export default class Character {
             this.movement = 6;
         }
         
+        this.hpIsScrolling = false;
+        
         this.outerHPBar = null;
         this.hpText = null;
+        
+        this.scrollingHP = this.currentHP;
+        
     }
     
     /**
@@ -53,12 +59,13 @@ export default class Character {
      */
     move(cursor) {
         // Move the character based on where the cursor currently is
-        this.sprite.position.set(
-            cursor.position.x * constants.TILESIZE,
-            cursor.position.y * constants.TILESIZE
-        );
+        //this.sprite.position.set(
+        //    cursor.position.x * constants.TILESIZE,
+        //    cursor.position.y * constants.TILESIZE
+        //);
         
         this.hasMoved = true;
+        cursor.spriteMoving = true;
         this.position.x = cursor.position.x;
         this.position.y = cursor.position.y;
         
@@ -71,6 +78,8 @@ export default class Character {
      * @param {Character} recipient - the other player's unit who is being attacked
      */
     attack(recipient) {
+        console.log(`${this.name} initiates on ${recipient.name}`);
+        
         // 1. Initiate on opponent
         let status = this.doAttackCalculations(recipient);
         
@@ -78,6 +87,11 @@ export default class Character {
         if (status === "recipient dies") {
             return status;
         }
+        
+        //this.hpIsScrolling = true;;
+        //while(this.hpIsScrolling) {}
+        
+        console.log(`${recipient.name} counterattacks ${this.name}`);
         
         // 2. Opponent counterattacks
         status = recipient.doAttackCalculations(this);
@@ -87,14 +101,21 @@ export default class Character {
             return "initiator dies";
         }
         
+        
+        
+        
         // 3. If the initiator is significantly faster than the recipient, the
         // former does a follow-up attack
         if (this.stats.speed - recipient.stats.speed >= 5) {
+            console.log(`${this.name} performs a follow-up attack on ${recipient.name}`);
+            
             return this.doAttackCalculations(recipient);
         }
         // 4. If the recipient is significantly faster than the initiator, the
         // former does a second (follow-up) counterattack
         else if (recipient.stats.speed - this.stats.speed >= 5) {
+            console.log(`${recipient.name} performs a follow-up counterattack on ${this.name}`);
+            
             return recipient.doAttackCalculations(this);
         }
     }
@@ -102,6 +123,8 @@ export default class Character {
     /**
      * Determine the damage to be dealt and subtract it from the opponent's HP
      * @param {Character} recipient - the character that receives the attack
+     * @return {String} status - a string indicating whether the recpient dies,
+     * or null otherwise
      * @private
      */
     doAttackCalculations(recipient) {
@@ -114,7 +137,7 @@ export default class Character {
         
         console.log("Attack strength with multiplier: " + attackStrength);
         
-        // TODO: Handle magic attacks
+        // TODO: Handle magic and ranged attacks
         
         // Subtract the opponent's defense from the damage to determine how much
         // to lower the opponent's HP
@@ -124,20 +147,31 @@ export default class Character {
         
         // The recipient's defense is high enough that no damage is dealt
         if (damage <= 0) {
-            return;
+            return null;
         }
         
         recipient.currentHP -= damage;
         
-        //Decrease health bar
-        recipient.outerHPBar.width = recipient.currentHP * 3;
+        // If a character's hp goes below 0, set it to 0 for HP bar purposes
+        if (recipient.currentHP < 0) {
+            recipient.currentHP = 0;
+        }
+        
+        // TODO: Move the following two lines to a new method in a class that
+        // manages the health bars so that this function only deals with doing
+        // attack calculations
+        
+        // Decrease health bar
+        recipient.outerHPBar.width = recipient.currentHP * constants.PIXEL_PER_HP;
         recipient.hpText.text = `${recipient.currentHP} / ${recipient.stats.hp}`
         
         console.log("Recipient HP: " + recipient.currentHP);
         
-        if (recipient.currentHP <= 0) {
+        if (recipient.currentHP === 0) {
             return "recipient dies";
         }
+        
+        return null;
     }
     
     /**

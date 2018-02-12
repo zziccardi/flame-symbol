@@ -60,7 +60,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 2);
+/******/ 	return __webpack_require__(__webpack_require__.s = 3);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -84,812 +84,11 @@ const constants = {
 
 /***/ }),
 /* 1 */
-/***/ (function(module, exports) {
-
-module.exports = {"Lyn":{"weapon-type":"sword","movement-type":"infantry","stats":{"hp":37,"attack":28,"speed":37,"defense":26,"resistance":29},"weapon":"Sol Katti"},"Marth":{"weapon-type":"sword","movement-type":"infantry","stats":{"hp":41,"attack":31,"speed":34,"defense":29,"resistance":23},"weapon":"Falchion"},"Frederick":{"weapon-type":"axe","movement-type":"cavalry","stats":{"hp":43,"attack":35,"speed":25,"defense":36,"resistance":14},"weapon":"Steel Axe"},"Hinoka":{"weapon-type":"lance","movement-type":"flier","stats":{"hp":41,"attack":35,"speed":32,"defense":25,"resistance":24},"weapon":"Hinoka's Spear"}}
-
-/***/ }),
-/* 2 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__classes_Character_js__ = __webpack_require__(3);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__classes_Tile_js__ = __webpack_require__(6);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__classes_Player_js__ = __webpack_require__(7);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__classes_Cursor_js__ = __webpack_require__(8);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__utilities_createKey_js__ = __webpack_require__(9);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__data_characters_json__ = __webpack_require__(1);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__data_characters_json___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_5__data_characters_json__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__constants_js__ = __webpack_require__(0);
-
-
-
-
-
-
-
-
-
-
-
-
-// Let C9 know this is included in the HTML
-/* global PIXI */
-
-const Application  = PIXI.Application;
-const Container    = PIXI.Container;
-const loader       = PIXI.loader;
-const Sprite       = PIXI.Sprite;
-const TextStyle    = PIXI.TextStyle;
-const Text         = PIXI.Text;
-
-// Pixi stuff
-let app = null;
-let gameScene, gameOverScene, state;
-
-// FIXME: Never used
-// Current Turn
-let turn = 1;
-
-// Text-related objects and styles
-let turnAndMovesMsgStyle, turnMessage, movesMessage;
-
-// The cursor (the colored sprite that shows the user where they are selecting)
-let cursor = new __WEBPACK_IMPORTED_MODULE_3__classes_Cursor_js__["a" /* default */]();
-
-// List of characters, list appended to by reading JSON file
-let characters = [];
-
-// Create the players, may allow choosing team and yellow and green options later
-let player1 = new __WEBPACK_IMPORTED_MODULE_2__classes_Player_js__["a" /* default */]([], "blue", 1);
-let player2 = new __WEBPACK_IMPORTED_MODULE_2__classes_Player_js__["a" /* default */]([], "red", 2);
-
-// Player whose turn it is
-let activePlayer = player1;
-
-let tiles = [];
-
-let leftKey  = Object(__WEBPACK_IMPORTED_MODULE_4__utilities_createKey_js__["a" /* default */])(37);
-let upKey    = Object(__WEBPACK_IMPORTED_MODULE_4__utilities_createKey_js__["a" /* default */])(38);
-let rightKey = Object(__WEBPACK_IMPORTED_MODULE_4__utilities_createKey_js__["a" /* default */])(39);
-let downKey  = Object(__WEBPACK_IMPORTED_MODULE_4__utilities_createKey_js__["a" /* default */])(40);
-let aKey     = Object(__WEBPACK_IMPORTED_MODULE_4__utilities_createKey_js__["a" /* default */])(65);
-let sKey     = Object(__WEBPACK_IMPORTED_MODULE_4__utilities_createKey_js__["a" /* default */])(83);
-
-main();
-
-function main() {
-    // Create the canvas
-    app = new Application({
-        width: __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].BOARDSIZE + 400,
-        height: __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].BOARDSIZE + 200,
-    });
-    
-    
-    //info = new PIXI.DisplayObjectContainer();
-    
-    document.getElementById("main").appendChild(app.view);
-    
-    // load the sprite sheet
-    loader
-        .add("../src/images/sprites/spritesheet.json")
-        .load(setup);
-    
-    // Generate the map tiles
-    for (let i = 0; i < __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].NUM_TILES; i++) {
-        let row = [];
-        
-        for (let j = 0; j < __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].NUM_TILES; j++) {
-            row.push(new __WEBPACK_IMPORTED_MODULE_1__classes_Tile_js__["a" /* default */](j, i, 1));
-        }
-        
-        tiles.push(row);
-    }
-}
-
-function setup() {
-    // Make the game scene and add it to the app stage
-    gameScene = new Container();
-    app.stage.addChild(gameScene);
-    
-    // Loop through the characters, add them to the overall array and to the individual player arrays
-    for (const key of Object.keys(__WEBPACK_IMPORTED_MODULE_5__data_characters_json___default.a)) {
-        let character = new __WEBPACK_IMPORTED_MODULE_0__classes_Character_js__["a" /* default */](key, 1);
-        
-        characters.push(character);
-        
-        player1.characters.push(character);
-    }
-    
-    // TEMP DUPLICATE CODE BELOW
-    
-    // Loop through the characters, add them to the overall array and to the individual player arrays
-    for (const key of Object.keys(__WEBPACK_IMPORTED_MODULE_5__data_characters_json___default.a)) {
-        let character = new __WEBPACK_IMPORTED_MODULE_0__classes_Character_js__["a" /* default */](key, 2);
-        
-        characters.push(character);
-        
-        player2.characters.push(character);
-    }
-    
-    let spritesheet = loader.resources["../src/images/sprites/spritesheet.json"].textures;
-    
-    loadTerrain();
-    loadCharacters();
-    
-    function loadTerrain() {
-        for(let i = 0; i < __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].BOARDSIZE; i += __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE) {
-            for(let j = 0; j < __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].BOARDSIZE; j += __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE) {
-                let sprite = new Sprite(spritesheet["grass.png"]);
-        
-                sprite.scale.set(__WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].SCALE, __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].SCALE);
-
-                // Set the character on the grid based on their grid position
-                sprite.position.set(i, j);
-                
-                gameScene.addChild(sprite);
-            }
-        }
-    }
-    
-    function loadCharacters() {
-        // Counters when looping through both player arrays
-        let player1Counter = 0;
-        let player2Counter = 0;
-        
-        let hpTextStyle = new TextStyle({
-            fontFamily: "Futura",
-            fontSize: 12,
-            fill: "white"
-        });
-        
-        characters.forEach((char) => {
-            //Values dependant on which team the character is on
-            let code;
-            let spacing;
-            let counter;
-            
-            //Check the character's team
-            if(player1.characters.includes(char)) {
-                code = 0x0000ff;
-                spacing = 50;
-                counter = player1Counter;
-            }
-            else {
-                code = 0xff0000;
-                spacing = 225;
-                counter = player2Counter;
-            }
-            
-            createHealthBar();
-            
-            //new HealthBar(char, constants.BOARDSIZE+spacing, (counter*40)+25);
-            
-            //Create the HP bar
-            function createHealthBar() {
-                //Write the character's name above the HP Bar
-                let characterName = new Text(char.name, hpTextStyle);
-                characterName.x = __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].BOARDSIZE+spacing;
-                characterName.y = (counter*40)+10;
-                gameScene.addChild(characterName);
-            
-                //Create the HP bar
-                let healthBar = new PIXI.DisplayObjectContainer();
-                healthBar.position.set(__WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].BOARDSIZE+spacing, (counter*40)+25);
-                gameScene.addChild(healthBar);
-    
-                //Create the black background rectangle
-                let innerBar = new PIXI.Graphics();
-                innerBar.beginFill(0x000000);
-                innerBar.drawRect(0, 0, char.stats.hp*__WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].PIXEL_PER_HP, 15);
-                innerBar.endFill();
-                healthBar.addChild(innerBar);
-        
-                //Create the front red rectangle
-                let outerBar = new PIXI.Graphics();
-                outerBar.beginFill(code);
-                outerBar.drawRect(0, 0, char.stats.hp*__WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].PIXEL_PER_HP, 15);
-                outerBar.endFill();
-                healthBar.addChild(outerBar);
-        
-                //Save the bars into the character for later access
-                healthBar.outer = outerBar;
-                
-                //Save the HP bar for later alteration
-                char.outerHPBar = healthBar.outer;
-                
-                //Write a number over the hp bar to represent the numerical HP
-                let characterHP = new Text(`${char.currentHP} / ${char.stats.hp}`, hpTextStyle);
-                characterHP.x = __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].BOARDSIZE+spacing;
-                characterHP.y = (counter*40)+25;
-                gameScene.addChild(characterHP);
-                
-                char.hpText = characterHP;
-            }
-            
-            // Set the filename
-            let fileName = char.name.toLowerCase();
-            
-            if (char.playerNumber == 1) {
-                fileName += `-${player1.color}.png`;
-            }
-            else {
-                fileName += `-${player2.color}.png`;
-            }
-            let sprite = new Sprite(spritesheet[fileName]);
-            
-            // Set the character on the grid based on their grid position from the character JSON
-            if(player1.characters.includes(char)) {
-                sprite.position.set(
-                    player1.characterCoordinates1[player1Counter].x * __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE, 
-                    player1.characterCoordinates1[player1Counter].y * __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE
-                );
-                // Update the character's position
-                char.position = player1.characterCoordinates1[player1Counter];
-                player1Counter++;
-            }
-            else {
-                sprite.position.set(
-                    player2.characterCoordinates2[player2Counter].x * __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE, 
-                    player2.characterCoordinates2[player2Counter].y * __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE
-                );
-                // Update the character's position
-                char.position = player2.characterCoordinates2[player2Counter];
-                player2Counter++;
-            }
-            
-            sprite.scale.set(__WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].SCALE, __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].SCALE);
-            
-            gameScene.addChild(sprite);
-            
-            char.sprite = sprite;
-            
-            // Set the tile to be occupied by the rendered character
-            tiles[char.position.x][char.position.y].character = char;
-        });
-        
-    }
-    
-    // Create the 'turn' and 'moves remaining' message styles
-    turnAndMovesMsgStyle = new TextStyle({
-        fontFamily: "Futura",
-        fontSize: 25,
-        fill: "white",
-    });
-    
-    turnMessage = new Text("Player 1's turn!", turnAndMovesMsgStyle);
-    turnMessage.x = __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].BOARDSIZE + 125;
-    turnMessage.y = __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].BOARDSIZE - 225;
-    gameScene.addChild(turnMessage);
-    
-    movesMessage = new Text("Moves remaining:", turnAndMovesMsgStyle);
-    movesMessage.x = __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].BOARDSIZE + 110;
-    movesMessage.y = __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].BOARDSIZE - 175;
-    gameScene.addChild(movesMessage);
-    
-    // Create the cursor sprite
-    cursor.notSelectedSprite = new Sprite(spritesheet["cursor.png"]);
-    cursor.notSelectedSprite.scale.set(__WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].SCALE, __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].SCALE);
-    cursor.notSelectedSprite.visible = false;
-    gameScene.addChild(cursor.notSelectedSprite);
-    
-    // Create the selected cursor sprite
-    cursor.selectedSprite = new Sprite(spritesheet["cursor-selected.png"]);
-    cursor.selectedSprite.scale.set(__WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].SCALE, __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].SCALE);
-    cursor.selectedSprite.visible = false;
-    gameScene.addChild(cursor.selectedSprite);
-    
-    // Create the target cursor sprite
-    cursor.targetSprite = new Sprite(spritesheet["cursor-target.png"]);
-    cursor.targetSprite.scale.set(__WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].SCALE, __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].SCALE);
-    cursor.targetSprite.visible = false;
-    gameScene.addChild(cursor.targetSprite);
-    
-    // Set the current sprite to the not selected sprite
-    cursor.currentSprite = cursor.notSelectedSprite;
-    
-    // Make the not selected cursor visible
-    cursor.notSelectedSprite.visible = true;
-    
-    // Create the gameOverScene
-    gameOverScene = new Container();
-    app.stage.addChild(gameOverScene);
-    
-    // Set gameOverScene to false since game isn't over when the game initially
-    // starts
-    gameOverScene.visible = false;
-    
-    // Create the text sprite and add it to the gameOverScene
-    let messageStyle = new TextStyle({
-        fontFamily: "Futura",
-        fontSize: 50,
-        fill: "white"
-    });
-    
-    let message;
-    if(player1.characters[0]) {
-        message = new Text(`${player1.color} team wins`, messageStyle);
-    }
-    else {
-        message = new Text(`${player2.color} team wins`, messageStyle);
-    }
-    
-    message.x = __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].BOARDSIZE / 3;
-    message.y = __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].BOARDSIZE / 2;
-    gameOverScene.addChild(message);
-    
-    // Set the game state
-    state = play;
-    
-    // Start the game loop 
-    app.ticker.add(delta => gameLoop(delta));
-}
-
-function gameLoop(delta) {
-    state(delta);
-}
-
-function gameOver() {
-    gameScene.visible = false;
-    gameOverScene.visible = true;
-}
-
-function play() {
-    
-    if(cursor.spriteMoving) {
-        //If no more tiles to move, stop movement
-        if(!cursor.spritePath[0]) {
-            cursor.spriteMoving = false;
-        }
-        else if(cursor.movedInSprite !== __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE) {
-            cursor.selectedCharacter.sprite.position.x += cursor.spritePath[0].x;
-            cursor.selectedCharacter.sprite.position.y += cursor.spritePath[0].y;
-            cursor.movedInSprite += __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].PIXEL_PER_FRAME;
-        }
-        else{
-            cursor.movedInSprite = 0;
-            cursor.spritePath.splice(0, 1);
-            
-        }
-    }
-    
-    //SCROLLING HP STUFF CURRENTLY BROKEN
-    // let characterToScrollHp;
-    // for(let i=0; i < characters.length; i++) {
-    //     if(characters[i].hpIsScrolling) {characterToScrollHp = characters[i];}
-    //     console.log(characterToScrollHp);
-    // }
-    // if(characterToScrollHp) {
-    //     if(characterToScrollHp.scrollingHP === characterToScrollHp.currentHP) {
-    //         characterToScrollHp.hpIsScrolling = false;
-    //     }
-    //     else {
-    //         characterToScrollHp.outerHPBar.width -= constants.PIXEL_PER_HP;
-    //         characterToScrollHp.hpText--;
-    //         characterToScrollHp.scrollingHP -= constants.PIXEL_PER_HP
-    //     }
-        
-    // }
-    
-    // If either player runs out of characters, the game is over, so update the state
-    if (!player1.characters[0] || !player2.characters[0]) {
-        state = gameOver;
-        return;
-    }
-    
-    // Check each character the active player has
-    // If all characters have moved, it is time to switch turns
-    let allCharactersMoved = true;
-    
-    for(let i=0; i < activePlayer.characters.length; i++) {
-        if(activePlayer.characters[i].hasMoved === false) {
-            allCharactersMoved = false;
-            break;
-        }
-    }
-    
-    // All characters for the active player have moved, so switch characters and
-    // reset the characters for the new active player to be able to be moved again
-    if(allCharactersMoved) {
-        // Prepare for this player's next turn
-        activePlayer.characters.forEach((char) => {
-            char.hasMoved = false;
-        });
-
-        if (activePlayer === player1) {
-            activePlayer = player2;
-            //turnMessage.text = "Player 2's turn!";
-        }
-        else{
-            activePlayer = player1;
-            turn++;
-            //turnMessage.text = "Player 1's turn!";
-        }
-        //alert(`It is ${activePlayer.color} team's turn`)
-    }
-    
-    
-    // TODO: Set the cursor to the current player's first unit
-    
-    
-}
-
-function changeMovementText() {
-    movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
-}
-
-downKey.press = () => {
-    if(cursor.currentSprite === cursor.targetSprite) {
-        return;
-    }
-    
-    if (cursor.position.y < __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].NUM_TILES-1 && (cursor.distanceLeft > 0 || cursor.isSelected === false)) {
-        cursor.currentSprite.y   += __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE;
-        cursor.position.y        += 1;
-    }
-    
-    if(cursor.isSelected && cursor.distanceLeft > 0) {
-        cursor.distanceLeft--;
-        cursor.spritePath.push({x:0, y:__WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].PIXEL_PER_FRAME})
-        changeMovementText();
-    }
-};
-
-upKey.press = () => {
-    if(cursor.currentSprite === cursor.targetSprite) {
-        return;
-    }
-    
-    if (cursor.position.y > 0 && (cursor.distanceLeft > 0 || cursor.isSelected === false)) {
-        cursor.currentSprite.y   -= __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE;
-        cursor.position.y        -= 1;
-        
-        //movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
-    }
-    
-    if(cursor.isSelected && cursor.distanceLeft > 0) {
-        cursor.distanceLeft--;
-        cursor.spritePath.push({x:0, y:-__WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].PIXEL_PER_FRAME})
-        changeMovementText();
-    }
-};
-
-leftKey.press = () => {
-    if(cursor.position.x > 0 && cursor.currentSprite === cursor.targetSprite) {
-        cursor.currentSprite.x  = cursor.targetArray[cursor.targetArrayIndex].position.x;
-        cursor.currentSprite.y  = cursor.targetArray[cursor.targetArrayIndex].position.y;
-        cursor.position.x       = cursor.targetArray[cursor.targetArrayIndex].position.x;
-        cursor.position.y       = cursor.targetArray[cursor.targetArrayIndex].position.y;
-        
-        if(cursor.targetArrayIndex === cursor.targetArray.length-1) cursor.targetArrayIndex = 0;
-        else cursor.targetArrayIndex++;
-        
-        //cursor.selectedCharacter = cursor.targetArray[cursor.targetArrayIndex];
-        
-        return;
-    }
-    
-    if (cursor.position.x > 0 && (cursor.distanceLeft > 0 || cursor.isSelected === false)) {
-        cursor.currentSprite.x  -= __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE;
-        cursor.position.x       -= 1;
-        
-        //movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
-    }
-    
-    
-    if(cursor.isSelected && cursor.distanceLeft > 0) {
-        cursor.distanceLeft--;
-        cursor.spritePath.push({x:-__WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].PIXEL_PER_FRAME, y:0})
-        changeMovementText();
-    }
-};
-
-rightKey.press = () => {
-    if(cursor.position.x < __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].NUM_TILES-1 && cursor.currentSprite === cursor.targetSprite) {
-        cursor.currentSprite.x  = cursor.targetArray[cursor.targetArrayIndex].position.x;
-        cursor.currentSprite.y  = cursor.targetArray[cursor.targetArrayIndex].position.y;
-        cursor.position.x       = cursor.targetArray[cursor.targetArrayIndex].position.x;
-        cursor.position.y       = cursor.targetArray[cursor.targetArrayIndex].position.y;
-        
-        if(cursor.targetArrayIndex === cursor.targetArray.length-1) cursor.targetArrayIndex = 0;
-        else cursor.targetArrayIndex++;
-        
-        //cursor.selectedCharacter = cursor.targetArray[cursor.targetArrayIndex];
-        
-        return;
-    }
-    
-    if (cursor.position.x < __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].NUM_TILES-1 && (cursor.distanceLeft > 0 || cursor.isSelected === false)) {
-        cursor.currentSprite.x   += __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE;
-        cursor.position.x        += 1;
-        
-        //movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
-    }
-    
-    if(cursor.isSelected && cursor.distanceLeft > 0) {
-        cursor.distanceLeft--;
-        cursor.spritePath.push({x:__WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].PIXEL_PER_FRAME, y:0})
-        changeMovementText();
-    }
-};
-
-aKey.press = () => {
-    //console.log(activePlayer.characters);
-    
-    // FIXME: This bugs out because it can sometimes be undefined
-    let currentTile = tiles[cursor.position.x][cursor.position.y];
-
-    // If we're currently targeting an enemy to attack
-    if (cursor.currentSprite === cursor.targetSprite) {
-        let initiator = cursor.selectedCharacter;
-        let recipient = tiles[cursor.position.x][cursor.position.y].character;
-        
-        let status = initiator.attack(recipient);
-        
-        //console.log("Recipient HP: " + recipient.currentHP);
-        //console.log("Initiator HP: " + initiator.currentHP);
-        
-        if (status === "recipient dies") {
-            let opponentPlayer = (activePlayer === player1)
-                ? player2
-                : player1;
-            
-            let recipientIndex = null;
-            
-            for (let i = 0; i < opponentPlayer.characters.length; i++) {
-                if (opponentPlayer.characters[i] === recipient) {
-                    recipientIndex = i;
-                    break;
-                }
-            }
-            
-            
-            recipient.sprite.destroy();
-            
-            // Is this necessary too?
-            gameScene.removeChild(recipient.sprite);
-            
-            tiles[cursor.position.x][cursor.position.y].character = null;
-            
-            opponentPlayer.characters.splice(recipientIndex, 1);
-        }
-        else if (status === "initiator dies") {
-            let initiatorIndex = null;
-            
-            for (let i = 0; i < activePlayer.characters.length; i++) {
-                if (activePlayer.characters[i] === initiator) {
-                    initiatorIndex = i;
-                    break;
-                }
-            }
-            
-            
-            initiator.sprite.destroy();
-            
-            // Is this necessary too?
-            gameScene.removeChild(initiator.sprite);
-            
-            tiles[initiator.position.x][initiator.position.y] = null;
-            
-            activePlayer.characters.splice(initiatorIndex, 1);
-        }
-        
-        cursor.currentSprite.visible = false;
-        cursor.currentSprite = cursor.notSelectedSprite;
-        cursor.currentSprite.visible = true;
-        cursor.currentSprite.position.set(
-            cursor.position.x * __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE,
-            cursor.position.y * __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE
-        );
-        
-        // FIXME: Need to make sure that if character dies, the correct player turn message
-        // is printed
-        // if(currentTile.character === null) {
-        //     turnMessage.text = "Player 2's turn!"
-        // }
-
-        // Check each character the active player has
-        // If all characters have moved, it is time to switch turns
-        let allCharactersMoved = true;
-        
-        for(let i=0; i < activePlayer.characters.length; i++) {
-            if(activePlayer.characters[i].hasMoved === false) {
-                allCharactersMoved = false;
-                break;
-            }
-        }
-        
-        if(allCharactersMoved) {
-            // FIXME: Need to make sure that if character dies, the correct player turn message
-            // is printed
-            if(currentTile.character === null) {
-                turnMessage.text = "Player 2's turn!";
-            }
-            else {
-                if(currentTile.character.playerNumber == 1) {
-                    turnMessage.text = "Player 2's turn!";
-                }
-                else {
-                    turnMessage.text = "Player 1's turn!";
-                }
-            }
-        }
-    }
-    
-    // The current cursor is in select mode
-    if (cursor.isSelected) {
-        // The player chose not to move, so simply mark their turn as moved
-        if ((cursor.startingTile.x === cursor.position.x &&
-            cursor.startingTile.y === cursor.position.y)) {
-            // Cursor is no longer selecting something
-            cursor.toggleSprites();
-            currentTile.character.hasMoved = true;
-        }
-        
-        // Make sure they don't try to move their character onto the same spot as another
-        // character
-        if(!tiles[cursor.position.x][cursor.position.y].character) {
-            
-            // Make sure no character exists on this tile, and then place the character
-            // on this tile after moving it
-            if(!currentTile.character) {
-                currentTile.character = cursor.selectedCharacter.move(cursor);
-                
-                // Set the old tile where the character originally came from to empty
-                tiles[cursor.startingTile.x][cursor.startingTile.y].character = null;
-                
-                // Cursor is no longer selecting something
-                cursor.toggleSprites();
-                
-                movesMessage.text = "Moves remaining:";
-            }
-        }
-        
-        // Check if player is adjacent to any opponents
-        let adjacentEnemies = [];
-        cursor.targetArray = [];
-        cursor.targetArrayIndex = 0;
-        
-        //debugger;
-        
-        // First check if character exists in above tile (but not if we're in the top row)
-        // If character exists, make sure it is an enemy character
-        if (cursor.selectedCharacter.position.y !== 0) {
-            let characterInTileAbove = tiles[cursor.position.x][cursor.position.y-1].character;
-            
-            if (characterInTileAbove &&
-                (characterInTileAbove.playerNumber !== activePlayer.playerNumber)) {
-                adjacentEnemies.push(characterInTileAbove);
-                cursor.targetArray.push(characterInTileAbove.sprite);
-            }
-        }
-        
-        if (cursor.selectedCharacter.position.y !== __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].NUM_TILES-1) {
-            let characterInTileBelow = tiles[cursor.position.x][cursor.position.y+1].character;
-            
-            if (characterInTileBelow &&
-                (characterInTileBelow.playerNumber !== activePlayer.playerNumber)) {
-                adjacentEnemies.push(characterInTileBelow);
-                cursor.targetArray.push(characterInTileBelow.sprite);
-            }
-        }
-        
-        if (cursor.selectedCharacter.position.x !== __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].NUM_TILES-1) {
-            let characterInTileRight = tiles[cursor.position.x+1][cursor.position.y].character;
-            
-            if (characterInTileRight &&
-                (characterInTileRight.playerNumber !== activePlayer.playerNumber)) {
-                adjacentEnemies.push(characterInTileRight);
-                cursor.targetArray.push(characterInTileRight.sprite);
-            }  
-        }
-        
-        if (cursor.selectedCharacter.position.x !== 0) {
-            let characterInTileLeft = tiles[cursor.position.x-1][cursor.position.y].character;
-            
-            if (characterInTileLeft &&
-                (characterInTileLeft.playerNumber !== activePlayer.playerNumber)) {
-                adjacentEnemies.push(characterInTileLeft);
-                cursor.targetArray.push(characterInTileLeft.sprite);
-            }
-        }
-        
-        // At least one enemy found, switch to target mode
-        if (adjacentEnemies[0]) {
-            cursor.currentSprite.visible = false;
-            cursor.currentSprite = cursor.targetSprite;
-            cursor.currentSprite.visible = true;
-            cursor.currentSprite.position.set(
-                adjacentEnemies[0].position.x * __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE,
-                adjacentEnemies[0].position.y * __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE
-            );
-            cursor.position.x = adjacentEnemies[0].position.x;
-            cursor.position.y = adjacentEnemies[0].position.y;
-            
-            return;
-        }
-        
-        // Check each character the active player has
-        // If all characters have moved, it is time to switch turns
-        let allCharactersMoved = true;
-        
-        for(let i=0; i < activePlayer.characters.length; i++) {
-            if(activePlayer.characters[i].hasMoved === false) {
-                allCharactersMoved = false;
-                break;
-            }
-        }
-        
-        if(allCharactersMoved) {
-            // TODO :: FIX ME!!! Need to make sure that if character dies, the correct player turn message
-            // is printed
-            if(currentTile.character === null) {
-                turnMessage.text = "Player 2's turn!";
-            }
-            else {
-                if(currentTile.character.playerNumber == 1) {
-                    turnMessage.text = "Player 2's turn!";
-                }
-                else {
-                    turnMessage.text = "Player 1's turn!";
-                }
-            }
-        }
-        
-        return;
-    }
-    
-    // If a character is present here and it is on the active player's team and it hasn't previously
-    // moved in this turn, select it
-    if (currentTile.character &&
-        activePlayer.characters.includes(currentTile.character) &&
-        !currentTile.character.hasMoved) {
-        
-        // Change the cursor sprite from unselected to selected
-        cursor.toggleSprites();
-        
-        // Save the character we just picked up into the cursor
-        cursor.selectedCharacter = currentTile.character;
-        
-        // Save the tile from which the character was moved from for future reference
-        cursor.startingTile.x = cursor.position.x;
-        cursor.startingTile.y = cursor.position.y;
-        
-        // Set the distance the character can travel
-        cursor.distanceLeft = currentTile.character.movement;
-        
-        movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
-    }
-};
-
-sKey.press = () => {
-    if (cursor.isSelected) {
-        cursor.toggleSprites();
-    }
-    
-    //If in target mode, and user decides not to attack, set back to regular gameplay
-    if (cursor.currentSprite == cursor.targetSprite) {
-        cursor.currentSprite.visible = false;
-        cursor.currentSprite = cursor.notSelectedSprite;
-        cursor.currentSprite.visible = true;
-        cursor.currentSprite.position.set = (
-            cursor.position.x * __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE,
-            cursor.position.y * __WEBPACK_IMPORTED_MODULE_6__constants_js__["a" /* default */].TILESIZE
-        );
-    }
-    
-    movesMessage.text = "Moves remaining:";
-};
-
-
-/***/ }),
-/* 3 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__classes_Weapon_js__ = __webpack_require__(4);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__data_characters_json__ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__data_characters_json__ = __webpack_require__(2);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__data_characters_json___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__data_characters_json__);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__constants_js__ = __webpack_require__(0);
 
@@ -915,7 +114,6 @@ class Character {
         this.stats            = data.stats;
         this.weapon           = new __WEBPACK_IMPORTED_MODULE_0__classes_Weapon_js__["a" /* default */](data.weapon, this.weaponType);
         this.playerNumber     = team;
-        this.currentHP        = this.stats.hp;
         this.hasMoved         = false;
         this.position = {
             x: null,
@@ -936,14 +134,14 @@ class Character {
         else if(this.movementType === "flier") {
             this.movement = 6;
         }
-        
+
+        // Healthbar and Health related items
+        this.healthBar = null;
+        this.currentHP = this.stats.hp;
         this.hpIsScrolling = false;
-        
         this.outerHPBar = null;
         this.hpText = null;
-        
         this.scrollingHP = this.currentHP;
-        
     }
     
     /**
@@ -1092,6 +290,793 @@ class Character {
 }
 /* harmony export (immutable) */ __webpack_exports__["a"] = Character;
 
+
+
+/***/ }),
+/* 2 */
+/***/ (function(module, exports) {
+
+module.exports = {"Lyn":{"weapon-type":"sword","movement-type":"infantry","stats":{"hp":37,"attack":28,"speed":37,"defense":26,"resistance":29},"weapon":"Sol Katti"},"Marth":{"weapon-type":"sword","movement-type":"infantry","stats":{"hp":41,"attack":31,"speed":34,"defense":29,"resistance":23},"weapon":"Falchion"},"Frederick":{"weapon-type":"axe","movement-type":"cavalry","stats":{"hp":43,"attack":35,"speed":25,"defense":36,"resistance":14},"weapon":"Steel Axe"},"Hinoka":{"weapon-type":"lance","movement-type":"flier","stats":{"hp":41,"attack":35,"speed":32,"defense":25,"resistance":24},"weapon":"Hinoka's Spear"}}
+
+/***/ }),
+/* 3 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__classes_Character_js__ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__classes_Tile_js__ = __webpack_require__(6);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__classes_Player_js__ = __webpack_require__(7);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__classes_Cursor_js__ = __webpack_require__(8);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__classes_HealthBar_js__ = __webpack_require__(9);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__utilities_createKey_js__ = __webpack_require__(10);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__data_characters_json__ = __webpack_require__(2);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__data_characters_json___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_6__data_characters_json__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_7__constants_js__ = __webpack_require__(0);
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Let C9 know this is included in the HTML
+/* global PIXI */
+
+const Application  = PIXI.Application;
+const Container    = PIXI.Container;
+const loader       = PIXI.loader;
+const Sprite       = PIXI.Sprite;
+const TextStyle    = PIXI.TextStyle;
+const Text         = PIXI.Text;
+
+// Pixi stuff
+let app = null;
+let gameScene, gameOverScene, state;
+
+// FIXME: Never used
+let turn = 1;
+
+// Text-related objects and styles
+let turnAndMovesMsgStyle, turnMessage, movesMessage;
+
+// The cursor (the colored sprite that shows the user where they are selecting)
+let cursor = new __WEBPACK_IMPORTED_MODULE_3__classes_Cursor_js__["a" /* default */]();
+
+// List of characters, list appended to by reading JSON file
+let characters = [];
+
+// Create the players, may allow choosing team and yellow and green options later
+let player1 = new __WEBPACK_IMPORTED_MODULE_2__classes_Player_js__["a" /* default */]([], "blue", 1);
+let player2 = new __WEBPACK_IMPORTED_MODULE_2__classes_Player_js__["a" /* default */]([], "red", 2);
+
+// Player whose turn it is
+let activePlayer = player1;
+
+let tiles = [];
+
+let keys = {
+    left:  Object(__WEBPACK_IMPORTED_MODULE_5__utilities_createKey_js__["a" /* default */])(37),
+    up:    Object(__WEBPACK_IMPORTED_MODULE_5__utilities_createKey_js__["a" /* default */])(38),
+    right: Object(__WEBPACK_IMPORTED_MODULE_5__utilities_createKey_js__["a" /* default */])(39),
+    down:  Object(__WEBPACK_IMPORTED_MODULE_5__utilities_createKey_js__["a" /* default */])(40),
+    a:     Object(__WEBPACK_IMPORTED_MODULE_5__utilities_createKey_js__["a" /* default */])(65),
+    s:     Object(__WEBPACK_IMPORTED_MODULE_5__utilities_createKey_js__["a" /* default */])(83)
+};
+
+main();
+
+function main() {
+    // Create the canvas
+    app = new Application({
+        width: __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].BOARDSIZE + 400,
+        height: __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].BOARDSIZE + 200,
+    });
+    
+    
+    //info = new PIXI.DisplayObjectContainer();
+    
+    document.getElementById("main").appendChild(app.view);
+    
+    // load the sprite sheet
+    loader
+        .add("../src/images/sprites/spritesheet.json")
+        .load(setup);
+    
+    // Generate the map tiles
+    for (let i = 0; i < __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].NUM_TILES; i++) {
+        let row = [];
+        
+        for (let j = 0; j < __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].NUM_TILES; j++) {
+            row.push(new __WEBPACK_IMPORTED_MODULE_1__classes_Tile_js__["a" /* default */](j, i, 1));
+        }
+        
+        tiles.push(row);
+    }
+}
+
+function setup() {
+    // Make the game scene and add it to the app stage
+    gameScene = new Container();
+    app.stage.addChild(gameScene);
+    
+    // Loop through the characters, add them to the overall array and to the individual player arrays
+    for (const key of Object.keys(__WEBPACK_IMPORTED_MODULE_6__data_characters_json___default.a)) {
+        let character = new __WEBPACK_IMPORTED_MODULE_0__classes_Character_js__["a" /* default */](key, 1);
+        
+        characters.push(character);
+        
+        player1.characters.push(character);
+    }
+    
+    // TEMP DUPLICATE CODE BELOW
+    
+    // Loop through the characters, add them to the overall array and to the individual player arrays
+    for (const key of Object.keys(__WEBPACK_IMPORTED_MODULE_6__data_characters_json___default.a)) {
+        let character = new __WEBPACK_IMPORTED_MODULE_0__classes_Character_js__["a" /* default */](key, 2);
+        
+        characters.push(character);
+        
+        player2.characters.push(character);
+    }
+    
+    let spritesheet = loader.resources["../src/images/sprites/spritesheet.json"].textures;
+    
+    loadTerrain();
+    loadCharacters();
+    
+    function loadTerrain() {
+        for(let i = 0; i < __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].BOARDSIZE; i += __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].TILESIZE) {
+            for(let j = 0; j < __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].BOARDSIZE; j += __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].TILESIZE) {
+                let sprite = new Sprite(spritesheet["grass.png"]);
+        
+                sprite.scale.set(__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].SCALE, __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].SCALE);
+
+                // Set the character on the grid based on their grid position
+                sprite.position.set(i, j);
+                
+                gameScene.addChild(sprite);
+            }
+        }
+    }
+    
+    function loadCharacters() {
+        // Counters when looping through both player arrays
+        let player1Counter = 0;
+        let player2Counter = 0;
+        
+        let hpTextStyle = new TextStyle({
+            fontFamily: "Futura",
+            fontSize: 12,
+            fill: "white"
+        });
+        
+        characters.forEach((char) => {
+            //Values dependant on which team the character is on
+            let code;
+            let spacing;
+            let counter;
+            
+            //Check the character's team
+            if(char.playerNumber === 1) {
+                code = 0x0000ff;
+                spacing = 50;
+                counter = player1Counter;
+            }
+            else {
+                code = 0xff0000;
+                spacing = 225;
+                counter = player2Counter;
+            }
+            
+            //Create the HP bar
+            let healthBar = new __WEBPACK_IMPORTED_MODULE_4__classes_HealthBar_js__["a" /* default */](char, gameScene);
+            healthBar.makeHealthBar(counter);
+     
+            // Set the filename
+            let fileName = char.name.toLowerCase();
+            
+            if (char.playerNumber == 1) {
+                fileName += `-${player1.color}.png`;
+            }
+            else {
+                fileName += `-${player2.color}.png`;
+            }
+            let sprite = new Sprite(spritesheet[fileName]);
+            
+            // Set the character on the grid based on their grid position from the character JSON
+            if(char.playerNumber === 1) {
+                sprite.position.set(
+                    player1.characterCoordinates1[player1Counter].x * __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].TILESIZE, 
+                    player1.characterCoordinates1[player1Counter].y * __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].TILESIZE
+                );
+                // Update the character's position
+                char.position = player1.characterCoordinates1[player1Counter];
+                player1Counter++;
+            }
+            else {
+                sprite.position.set(
+                    player2.characterCoordinates2[player2Counter].x * __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].TILESIZE, 
+                    player2.characterCoordinates2[player2Counter].y * __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].TILESIZE
+                );
+                // Update the character's position
+                char.position = player2.characterCoordinates2[player2Counter];
+                player2Counter++;
+            }
+            
+            sprite.scale.set(__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].SCALE, __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].SCALE);
+            
+            gameScene.addChild(sprite);
+            
+            char.sprite = sprite;
+            
+            // Set the tile to be occupied by the rendered character
+            tiles[char.position.x][char.position.y].character = char;
+        });
+        
+    }
+    
+    // Create the 'turn' and 'moves remaining' message styles
+    turnAndMovesMsgStyle = new TextStyle({
+        fontFamily: "Futura",
+        fontSize: 25,
+        fill: "white",
+    });
+    
+    turnMessage = new Text("Player 1's turn!", turnAndMovesMsgStyle);
+    turnMessage.x = __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].BOARDSIZE + 125;
+    turnMessage.y = __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].BOARDSIZE - 225;
+    gameScene.addChild(turnMessage);
+    
+    movesMessage = new Text("Moves remaining:", turnAndMovesMsgStyle);
+    movesMessage.x = __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].BOARDSIZE + 110;
+    movesMessage.y = __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].BOARDSIZE - 175;
+    gameScene.addChild(movesMessage);
+    
+    // Create the cursor sprite
+    cursor.notSelectedSprite = new Sprite(spritesheet["cursor.png"]);
+    cursor.notSelectedSprite.scale.set(__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].SCALE, __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].SCALE);
+    cursor.notSelectedSprite.visible = false;
+    gameScene.addChild(cursor.notSelectedSprite);
+    
+    // Create the selected cursor sprite
+    cursor.selectedSprite = new Sprite(spritesheet["cursor-selected.png"]);
+    cursor.selectedSprite.scale.set(__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].SCALE, __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].SCALE);
+    cursor.selectedSprite.visible = false;
+    gameScene.addChild(cursor.selectedSprite);
+    
+    // Create the target cursor sprite
+    cursor.targetSprite = new Sprite(spritesheet["cursor-target.png"]);
+    cursor.targetSprite.scale.set(__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].SCALE, __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].SCALE);
+    cursor.targetSprite.visible = false;
+    gameScene.addChild(cursor.targetSprite);
+    
+    // Set the current sprite to the not selected sprite
+    cursor.currentSprite = cursor.notSelectedSprite;
+    
+    // Make the not selected cursor visible
+    cursor.notSelectedSprite.visible = true;
+    
+    // Create the gameOverScene
+    gameOverScene = new Container();
+    app.stage.addChild(gameOverScene);
+    
+    // Set gameOverScene to false since game isn't over when the game initially
+    // starts
+    gameOverScene.visible = false;
+    
+    // Create the text sprite and add it to the gameOverScene
+    let messageStyle = new TextStyle({
+        fontFamily: "Futura",
+        fontSize: 50,
+        fill: "white"
+    });
+    
+    let message;
+    if(player1.characters[0]) {
+        message = new Text(`${player1.color} team wins`, messageStyle);
+    }
+    else {
+        message = new Text(`${player2.color} team wins`, messageStyle);
+    }
+    
+    message.x = __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].BOARDSIZE / 3;
+    message.y = __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].BOARDSIZE / 2;
+    gameOverScene.addChild(message);
+    
+    // Set the game state
+    state = play;
+    
+    // Start the game loop 
+    app.ticker.add(delta => gameLoop(delta));
+}
+
+function gameLoop(delta) {
+    state(delta);
+}
+
+function gameOver() {
+    gameScene.visible = false;
+    gameOverScene.visible = true;
+}
+
+function play() {
+    
+    if(cursor.spriteMoving) {
+        //If no more tiles to move, stop movement
+        if(!cursor.spritePath[0]) {
+            cursor.spriteMoving = false;
+        }
+        else if(cursor.movedInSprite !== __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].TILESIZE) {
+            cursor.selectedCharacter.sprite.position.x += cursor.spritePath[0].x;
+            cursor.selectedCharacter.sprite.position.y += cursor.spritePath[0].y;
+            cursor.movedInSprite += __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME;
+        }
+        else{
+            cursor.movedInSprite = 0;
+            cursor.spritePath.splice(0, 1);
+            
+        }
+    }
+    
+    //SCROLLING HP STUFF CURRENTLY BROKEN
+    // let characterToScrollHp;
+    // for(let i=0; i < characters.length; i++) {
+    //     if(characters[i].hpIsScrolling) {characterToScrollHp = characters[i];}
+    //     console.log(characterToScrollHp);
+    // }
+    // if(characterToScrollHp) {
+    //     if(characterToScrollHp.scrollingHP === characterToScrollHp.currentHP) {
+    //         characterToScrollHp.hpIsScrolling = false;
+    //     }
+    //     else {
+    //         characterToScrollHp.outerHPBar.width -= constants.PIXEL_PER_HP;
+    //         characterToScrollHp.hpText--;
+    //         characterToScrollHp.scrollingHP -= constants.PIXEL_PER_HP
+    //     }
+        
+    // }
+    
+    // If either player runs out of characters, the game is over, so update the state
+    if (!player1.characters[0] || !player2.characters[0]) {
+        state = gameOver;
+        return;
+    }
+    
+    // Check each character the active player has
+    // If all characters have moved, it is time to switch turns
+    let allCharactersMoved = true;
+    
+    for(let i=0; i < activePlayer.characters.length; i++) {
+        if(activePlayer.characters[i].hasMoved === false) {
+            allCharactersMoved = false;
+            break;
+        }
+    }
+    
+    // All characters for the active player have moved, so switch characters and
+    // reset the characters for the new active player to be able to be moved again
+    if(allCharactersMoved) {
+        // Prepare for this player's next turn
+        activePlayer.characters.forEach((char) => {
+            char.hasMoved = false;
+        });
+
+        if (activePlayer === player1) {
+            activePlayer = player2;
+            //turnMessage.text = "Player 2's turn!";
+        }
+        else{
+            activePlayer = player1;
+            turn++;
+            //turnMessage.text = "Player 1's turn!";
+        }
+        //alert(`It is ${activePlayer.color} team's turn`)
+    }
+    
+    
+    // TODO: Set the cursor to the current player's first unit
+    
+    
+}
+
+function changeMovementText() {
+    movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
+}
+
+keys.down.press = () => {
+    if(cursor.currentSprite === cursor.targetSprite) {
+        return;
+    }
+    
+    if (cursor.position.y < __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].NUM_TILES-1 && (cursor.distanceLeft > 0 || cursor.isSelected === false)) {
+        cursor.currentSprite.y   += __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].TILESIZE;
+        cursor.position.y        += 1;
+    }
+    
+    if(cursor.isSelected && cursor.distanceLeft > 0) {
+        cursor.distanceLeft--;
+        cursor.spritePath.push({x:0, y:__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME})
+        changeMovementText();
+    }
+};
+
+keys.up.press = () => {
+    if(cursor.currentSprite === cursor.targetSprite) {
+        return;
+    }
+    
+    if (cursor.position.y > 0 && (cursor.distanceLeft > 0 || cursor.isSelected === false)) {
+        cursor.currentSprite.y   -= __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].TILESIZE;
+        cursor.position.y        -= 1;
+        
+        //movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
+    }
+    
+    if(cursor.isSelected && cursor.distanceLeft > 0) {
+        cursor.distanceLeft--;
+        cursor.spritePath.push({x:0, y:-__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME})
+        changeMovementText();
+    }
+};
+
+keys.left.press = () => {
+    if(cursor.position.x > 0 && cursor.currentSprite === cursor.targetSprite) {
+        cursor.currentSprite.x  = cursor.targetArray[cursor.targetArrayIndex].position.x;
+        cursor.currentSprite.y  = cursor.targetArray[cursor.targetArrayIndex].position.y;
+        cursor.position.x       = cursor.targetArray[cursor.targetArrayIndex].position.x;
+        cursor.position.y       = cursor.targetArray[cursor.targetArrayIndex].position.y;
+        
+        if(cursor.targetArrayIndex === cursor.targetArray.length-1) cursor.targetArrayIndex = 0;
+        else cursor.targetArrayIndex++;
+        
+        //cursor.selectedCharacter = cursor.targetArray[cursor.targetArrayIndex];
+        
+        return;
+    }
+    
+    if (cursor.position.x > 0 && (cursor.distanceLeft > 0 || cursor.isSelected === false)) {
+        cursor.currentSprite.x  -= __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].TILESIZE;
+        cursor.position.x       -= 1;
+        
+        //movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
+    }
+    
+    
+    if(cursor.isSelected && cursor.distanceLeft > 0) {
+        cursor.distanceLeft--;
+        cursor.spritePath.push({x:-__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME, y:0})
+        changeMovementText();
+    }
+};
+
+keys.right.press = () => {
+    if(cursor.position.x < __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].NUM_TILES-1 && cursor.currentSprite === cursor.targetSprite) {
+        cursor.currentSprite.x  = cursor.targetArray[cursor.targetArrayIndex].position.x;
+        cursor.currentSprite.y  = cursor.targetArray[cursor.targetArrayIndex].position.y;
+        cursor.position.x       = cursor.targetArray[cursor.targetArrayIndex].position.x;
+        cursor.position.y       = cursor.targetArray[cursor.targetArrayIndex].position.y;
+        
+        if(cursor.targetArrayIndex === cursor.targetArray.length-1) cursor.targetArrayIndex = 0;
+        else cursor.targetArrayIndex++;
+        
+        //cursor.selectedCharacter = cursor.targetArray[cursor.targetArrayIndex];
+        
+        return;
+    }
+    
+    if (cursor.position.x < __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].NUM_TILES-1 && (cursor.distanceLeft > 0 || cursor.isSelected === false)) {
+        cursor.currentSprite.x   += __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].TILESIZE;
+        cursor.position.x        += 1;
+        
+        //movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
+    }
+    
+    if(cursor.isSelected && cursor.distanceLeft > 0) {
+        cursor.distanceLeft--;
+        cursor.spritePath.push({x:__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME, y:0})
+        changeMovementText();
+    }
+};
+
+keys.a.press = () => {
+    // Trying to fix error below...
+    if (cursor.position.x > 14 || cursor.position.y > 14) {
+        debugger;
+    }
+    
+    // FIXME: This breaks when there are two enemies adjacent to you and you
+    // try to attack one of them
+    let currentTile = tiles[cursor.position.x][cursor.position.y];
+    
+    if (!currentTile) {
+        console.error("Error setting currentTile", currentTile);
+        return;
+    }
+
+    // If we're currently targeting an enemy to attack
+    if (cursor.currentSprite === cursor.targetSprite) {
+        selectEnemyToAttack(currentTile);
+    }
+    
+    // If a was clicked and a character is currently selected
+    if (cursor.isSelected) {
+        // The player chose not to move, so simply mark their turn as moved
+        if ((cursor.startingTile.x === cursor.position.x &&
+            cursor.startingTile.y === cursor.position.y)) {
+            // Cursor is no longer selecting something
+            cursor.toggleSprites();
+            currentTile.character.hasMoved = true;
+            movesMessage.text = "Moves remaining:";
+        }
+        
+        // FIXME: Can't access property "character" of null occurs here sometimes
+        // Make sure no character exists on this tile, and then place the character
+        // on this tile after moving it
+        if (!currentTile.character) {
+            currentTile.character = cursor.selectedCharacter.move(cursor);
+            
+            // Set the old tile where the character originally came from to empty
+            tiles[cursor.startingTile.x][cursor.startingTile.y].character = null;
+            
+            // Cursor is no longer selecting something
+            cursor.toggleSprites();
+            
+            movesMessage.text = "Moves remaining:";
+        }
+        
+        let status = checkIfCanAttack();
+        
+        if (status === "switched mode") {
+            return;
+        }
+        
+        // TODO: Make this a function since it's duplicated in a bunch of places
+        // Check each character the active player has
+        // If all characters have moved, it is time to switch turns
+        let allCharactersMoved = true;
+        
+        for(let i=0; i < activePlayer.characters.length; i++) {
+            if(activePlayer.characters[i].hasMoved === false) {
+                allCharactersMoved = false;
+                break;
+            }
+        }
+        
+        if(allCharactersMoved) {
+            // FIXME: Need to make sure that if character dies, the correct player turn message
+            // is printed
+            if(currentTile.character === null) {
+                turnMessage.text = "Player 2's turn!";
+            }
+            else {
+                if(currentTile.character.playerNumber == 1) {
+                    turnMessage.text = "Player 2's turn!";
+                }
+                else {
+                    turnMessage.text = "Player 1's turn!";
+                }
+            }
+        }
+        
+        return;
+    }
+    
+    // If a character is present here and it is on the active player's team and it hasn't previously
+    // moved in this turn, select it
+    if (currentTile.character &&
+        activePlayer.characters.includes(currentTile.character) &&
+        !currentTile.character.hasMoved) {
+        
+        selectCharacter(currentTile);
+    }
+};
+
+keys.s.press = () => {
+    // Reset the sprite path if the player changed their mind
+    cursor.spritePath = [];
+    
+    if (cursor.isSelected) {
+        cursor.toggleSprites();
+    }
+    
+    //If in target mode, and user decides not to attack, set back to regular gameplay
+    if (cursor.currentSprite == cursor.targetSprite) {
+        cursor.currentSprite.visible = false;
+        cursor.currentSprite = cursor.notSelectedSprite;
+        cursor.currentSprite.visible = true;
+        cursor.currentSprite.position.set = (
+            cursor.position.x * __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].TILESIZE,
+            cursor.position.y * __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].TILESIZE
+        );
+    }
+    
+    movesMessage.text = "Moves remaining:";
+};
+
+// *****************************************************************************
+
+function selectCharacter(currentTile) {
+    // Change the cursor sprite from unselected to selected
+    cursor.toggleSprites();
+    
+    // Save the character we just picked up into the cursor
+    cursor.selectedCharacter = currentTile.character;
+    
+    // Save the tile from which the character was moved from for future reference
+    cursor.startingTile.x = cursor.position.x;
+    cursor.startingTile.y = cursor.position.y;
+    
+    // Set the distance the character can travel
+    cursor.distanceLeft = currentTile.character.movement;
+    
+    movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
+}
+
+function selectEnemyToAttack(currentTile) {
+    let initiator = cursor.selectedCharacter;
+    let recipient = tiles[cursor.position.x][cursor.position.y].character;
+    
+    let status = initiator.attack(recipient);
+    
+    //console.log("Recipient HP: " + recipient.currentHP);
+    //console.log("Initiator HP: " + initiator.currentHP);
+    
+    if (status === "recipient dies") {
+        let opponentPlayer = (activePlayer === player1)
+            ? player2
+            : player1;
+        
+        let recipientIndex = null;
+        
+        for (let i = 0; i < opponentPlayer.characters.length; i++) {
+            if (opponentPlayer.characters[i] === recipient) {
+                recipientIndex = i;
+                break;
+            }
+        }
+        
+        recipient.sprite.destroy();
+        
+        // Is this necessary too?
+        gameScene.removeChild(recipient.sprite);
+        
+        tiles[cursor.position.x][cursor.position.y].character = null;
+        
+        opponentPlayer.characters.splice(recipientIndex, 1);
+    }
+    else if (status === "initiator dies") {
+        let initiatorIndex = null;
+        
+        for (let i = 0; i < activePlayer.characters.length; i++) {
+            if (activePlayer.characters[i] === initiator) {
+                initiatorIndex = i;
+                break;
+            }
+        }
+        
+        initiator.sprite.destroy();
+        
+        // Is this necessary too?
+        gameScene.removeChild(initiator.sprite);
+        
+        tiles[initiator.position.x][initiator.position.y] = null;
+        
+        activePlayer.characters.splice(initiatorIndex, 1);
+    }
+    
+    cursor.currentSprite.visible = false;
+    cursor.currentSprite = cursor.notSelectedSprite;
+    cursor.currentSprite.visible = true;
+    cursor.currentSprite.position.set(
+        cursor.position.x * __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].TILESIZE,
+        cursor.position.y * __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].TILESIZE
+    );
+    
+    // FIXME: Need to make sure that if character dies, the correct player turn message
+    // is printed
+    // if(currentTile.character === null) {
+    //     turnMessage.text = "Player 2's turn!"
+    // }
+
+    // Check each character the active player has
+    // If all characters have moved, it is time to switch turns
+    let allCharactersMoved = true;
+    
+    for(let i=0; i < activePlayer.characters.length; i++) {
+        if(activePlayer.characters[i].hasMoved === false) {
+            allCharactersMoved = false;
+            break;
+        }
+    }
+    
+    if(allCharactersMoved) {
+        // FIXME: Need to make sure that if character dies, the correct player turn message
+        // is printed
+        if(currentTile.character === null) {
+            turnMessage.text = "Player 2's turn!";
+        }
+        else {
+            if(currentTile.character.playerNumber == 1) {
+                turnMessage.text = "Player 2's turn!";
+            }
+            else {
+                turnMessage.text = "Player 1's turn!";
+            }
+        }
+    }
+}
+
+function checkIfCanAttack() {
+    // Check if player is adjacent to any opponents
+    let adjacentEnemies = [];
+    
+    cursor.targetArray = [];
+    cursor.targetArrayIndex = 0;
+    
+    // First check if character exists in above tile (but not if we're in the top row)
+    // If character exists, make sure it is an enemy character
+    if (cursor.selectedCharacter.position.y !== 0) {
+        let characterInTileAbove = tiles[cursor.position.x][cursor.position.y-1].character;
+        
+        if (characterInTileAbove &&
+            (characterInTileAbove.playerNumber !== activePlayer.playerNumber)) {
+            adjacentEnemies.push(characterInTileAbove);
+            cursor.targetArray.push(characterInTileAbove.sprite);
+        }
+    }
+    
+    if (cursor.selectedCharacter.position.y !== __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].NUM_TILES-1) {
+        let characterInTileBelow = tiles[cursor.position.x][cursor.position.y+1].character;
+        
+        if (characterInTileBelow &&
+            (characterInTileBelow.playerNumber !== activePlayer.playerNumber)) {
+            adjacentEnemies.push(characterInTileBelow);
+            cursor.targetArray.push(characterInTileBelow.sprite);
+        }
+    }
+    
+    if (cursor.selectedCharacter.position.x !== __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].NUM_TILES-1) {
+        let characterInTileRight = tiles[cursor.position.x+1][cursor.position.y].character;
+        
+        if (characterInTileRight &&
+            (characterInTileRight.playerNumber !== activePlayer.playerNumber)) {
+            adjacentEnemies.push(characterInTileRight);
+            cursor.targetArray.push(characterInTileRight.sprite);
+        }  
+    }
+    
+    if (cursor.selectedCharacter.position.x !== 0) {
+        let characterInTileLeft = tiles[cursor.position.x-1][cursor.position.y].character;
+        
+        if (characterInTileLeft &&
+            (characterInTileLeft.playerNumber !== activePlayer.playerNumber)) {
+            adjacentEnemies.push(characterInTileLeft);
+            cursor.targetArray.push(characterInTileLeft.sprite);
+        }
+    }
+    
+    // At least one enemy found, switch to target mode
+    if (adjacentEnemies[0]) {
+        cursor.currentSprite.visible = false;
+        cursor.currentSprite = cursor.targetSprite;
+        cursor.currentSprite.visible = true;
+        cursor.currentSprite.position.set(
+            adjacentEnemies[0].position.x * __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].TILESIZE,
+            adjacentEnemies[0].position.y * __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].TILESIZE
+        );
+        cursor.position.x = adjacentEnemies[0].position.x;
+        cursor.position.y = adjacentEnemies[0].position.y;
+        
+        return "switched mode";
+    }
+}
 
 
 /***/ }),
@@ -1271,6 +1256,95 @@ class Cursor {
 
 /***/ }),
 /* 9 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__constants_js__ = __webpack_require__(0);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__Character_js__ = __webpack_require__(1);
+
+
+
+const TextStyle = PIXI.TextStyle;
+const Text      = PIXI.Text;
+
+// The text style for the HP
+const hpTextStyle = new TextStyle({
+    fontFamily: "Futura",
+    fontSize: 12,
+    fill: "white"
+});
+
+
+class HealthBar {
+    constructor(char, canvas) {
+        this.character      = char;
+        this.canvas         = canvas;
+    }
+
+    makeHealthBar(charCounter) {
+        //Values dependant on which team the character is on
+        let code;
+        let spacing;
+        let counter;
+        
+        //Check the character's team
+        if(this.character.playerNumber === 1) {
+            code = 0x0000ff;
+            spacing = 50;
+            counter = charCounter;
+        }
+        else {
+            code = 0xff0000;
+            spacing = 225;
+            counter = charCounter;
+        }
+        
+        //Write the character's name above the HP Bar
+        let characterName = new Text(this.character.name, hpTextStyle);
+        characterName.x = __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].BOARDSIZE + spacing;
+        characterName.y = (counter*40) + 10;
+        this.canvas.addChild(characterName);
+    
+        //Create the HP bar
+        let healthBar = new PIXI.DisplayObjectContainer();
+        healthBar.position.set(__WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].BOARDSIZE + spacing, (counter*40) + 25);
+        this.canvas.addChild(healthBar);
+
+        //Create the black background rectangle
+        let innerBar = new PIXI.Graphics();
+        innerBar.beginFill(0x000000);
+        innerBar.drawRect(0, 0, this.character.stats.hp * __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].PIXEL_PER_HP, 15);
+        innerBar.endFill();
+        healthBar.addChild(innerBar);
+
+        //Create the front red rectangle
+        let outerBar = new PIXI.Graphics();
+        outerBar.beginFill(code);
+        outerBar.drawRect(0, 0, this.character.stats.hp * __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].PIXEL_PER_HP, 15);
+        outerBar.endFill();
+        healthBar.addChild(outerBar);
+
+        //Save the bars into the character for later access
+        healthBar.outer = outerBar;
+        
+        //Save the HP bar for later alteration
+        this.character.outerHPBar = healthBar.outer;
+        
+        //Write a number over the hp bar to represent the numerical HP
+        let characterHP = new Text(`${this.character.currentHP} / ${this.character.stats.hp}`, hpTextStyle);
+        characterHP.x = __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].BOARDSIZE+spacing;
+        characterHP.y = (counter*40) + 25;
+        this.canvas.addChild(characterHP);
+        
+        this.character.hpText = characterHP;
+    }
+}
+/* harmony export (immutable) */ __webpack_exports__["a"] = HealthBar;
+
+
+
+/***/ }),
+/* 10 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";

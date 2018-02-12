@@ -21,7 +21,6 @@ export default class Character {
         this.stats            = data.stats;
         this.weapon           = new Weapon(data.weapon, this.weaponType);
         this.playerNumber     = team;
-        this.currentHP        = this.stats.hp;
         this.hasMoved         = false;
         this.position = {
             x: null,
@@ -42,14 +41,14 @@ export default class Character {
         else if(this.movementType === "flier") {
             this.movement = 6;
         }
-        
+
+        // Healthbar and Health related items
+        this.healthBar = null;
+        this.currentHP = this.stats.hp;
         this.hpIsScrolling = false;
-        
         this.outerHPBar = null;
         this.hpText = null;
-        
         this.scrollingHP = this.currentHP;
-        
     }
     
     /**

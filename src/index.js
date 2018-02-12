@@ -1,8 +1,9 @@
 
-import Character from "./classes/Character.js";
-import Tile      from "./classes/Tile.js";
-import Player    from "./classes/Player.js";
-import Cursor    from "./classes/Cursor.js";
+import Character    from "./classes/Character.js";
+import Tile         from "./classes/Tile.js";
+import Player       from "./classes/Player.js";
+import Cursor       from "./classes/Cursor.js";
+import HealthBar    from "./classes/HealthBar.js";
 
 import createKey from "./utilities/createKey.js";
 
@@ -25,7 +26,6 @@ let app = null;
 let gameScene, gameOverScene, state;
 
 // FIXME: Never used
-// Current Turn
 let turn = 1;
 
 // Text-related objects and styles
@@ -46,12 +46,14 @@ let activePlayer = player1;
 
 let tiles = [];
 
-let leftKey  = createKey(37);
-let upKey    = createKey(38);
-let rightKey = createKey(39);
-let downKey  = createKey(40);
-let aKey     = createKey(65);
-let sKey     = createKey(83);
+let keys = {
+    left:  createKey(37),
+    up:    createKey(38),
+    right: createKey(39),
+    down:  createKey(40),
+    a:     createKey(65),
+    s:     createKey(83)
+};
 
 main();
 
@@ -158,52 +160,10 @@ function setup() {
                 counter = player2Counter;
             }
             
-            createHealthBar();
-            
-            //new HealthBar(char, constants.BOARDSIZE+spacing, (counter*40)+25);
-            
             //Create the HP bar
-            function createHealthBar() {
-                //Write the character's name above the HP Bar
-                let characterName = new Text(char.name, hpTextStyle);
-                characterName.x = constants.BOARDSIZE+spacing;
-                characterName.y = (counter*40)+10;
-                gameScene.addChild(characterName);
-            
-                //Create the HP bar
-                let healthBar = new PIXI.DisplayObjectContainer();
-                healthBar.position.set(constants.BOARDSIZE+spacing, (counter*40)+25);
-                gameScene.addChild(healthBar);
-    
-                //Create the black background rectangle
-                let innerBar = new PIXI.Graphics();
-                innerBar.beginFill(0x000000);
-                innerBar.drawRect(0, 0, char.stats.hp*constants.PIXEL_PER_HP, 15);
-                innerBar.endFill();
-                healthBar.addChild(innerBar);
-        
-                //Create the front red rectangle
-                let outerBar = new PIXI.Graphics();
-                outerBar.beginFill(code);
-                outerBar.drawRect(0, 0, char.stats.hp*constants.PIXEL_PER_HP, 15);
-                outerBar.endFill();
-                healthBar.addChild(outerBar);
-        
-                //Save the bars into the character for later access
-                healthBar.outer = outerBar;
-                
-                //Save the HP bar for later alteration
-                char.outerHPBar = healthBar.outer;
-                
-                //Write a number over the hp bar to represent the numerical HP
-                let characterHP = new Text(`${char.currentHP} / ${char.stats.hp}`, hpTextStyle);
-                characterHP.x = constants.BOARDSIZE+spacing;
-                characterHP.y = (counter*40)+25;
-                gameScene.addChild(characterHP);
-                
-                char.hpText = characterHP;
-            }
-            
+            let healthBar = new HealthBar(char, gameScene);
+            healthBar.makeHealthBar(counter);
+     
             // Set the filename
             let fileName = char.name.toLowerCase();
             
@@ -415,7 +375,7 @@ function changeMovementText() {
     movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
 }
 
-downKey.press = () => {
+keys.down.press = () => {
     if(cursor.currentSprite === cursor.targetSprite) {
         return;
     }
@@ -432,7 +392,7 @@ downKey.press = () => {
     }
 };
 
-upKey.press = () => {
+keys.up.press = () => {
     if(cursor.currentSprite === cursor.targetSprite) {
         return;
     }
@@ -451,7 +411,7 @@ upKey.press = () => {
     }
 };
 
-leftKey.press = () => {
+keys.left.press = () => {
     if(cursor.position.x > 0 && cursor.currentSprite === cursor.targetSprite) {
         cursor.currentSprite.x  = cursor.targetArray[cursor.targetArrayIndex].position.x;
         cursor.currentSprite.y  = cursor.targetArray[cursor.targetArrayIndex].position.y;
@@ -481,7 +441,7 @@ leftKey.press = () => {
     }
 };
 
-rightKey.press = () => {
+keys.right.press = () => {
     if(cursor.position.x < constants.NUM_TILES-1 && cursor.currentSprite === cursor.targetSprite) {
         cursor.currentSprite.x  = cursor.targetArray[cursor.targetArrayIndex].position.x;
         cursor.currentSprite.y  = cursor.targetArray[cursor.targetArrayIndex].position.y;
@@ -510,81 +470,63 @@ rightKey.press = () => {
     }
 };
 
-aKey.press = () => {
-    //console.log(activePlayer.characters);
+// TODO : Sometimes the game doesn't let you select any character on the board,
+// probably because it thinks a character for a team hasn't moved yet in the turn,
+// when in reality the character is dead/just died
+
+keys.a.press = () => {
+    // Trying to fix error below...
+    if (cursor.position.x > 14 || cursor.position.y > 14) {
+        debugger;
+    }
     
-    // FIXME: This bugs out because it can sometimes be undefined
+    // FIXME: This breaks when there are two enemies adjacent to you and you
+    // try to attack one of them
     let currentTile = tiles[cursor.position.x][cursor.position.y];
+    
+    if (!currentTile) {
+        console.error("Error setting currentTile", currentTile);
+        return;
+    }
 
     // If we're currently targeting an enemy to attack
     if (cursor.currentSprite === cursor.targetSprite) {
-        let initiator = cursor.selectedCharacter;
-        let recipient = tiles[cursor.position.x][cursor.position.y].character;
-        
-        let status = initiator.attack(recipient);
-        
-        //console.log("Recipient HP: " + recipient.currentHP);
-        //console.log("Initiator HP: " + initiator.currentHP);
-        
-        if (status === "recipient dies") {
-            let opponentPlayer = (activePlayer === player1)
-                ? player2
-                : player1;
-            
-            let recipientIndex = null;
-            
-            for (let i = 0; i < opponentPlayer.characters.length; i++) {
-                if (opponentPlayer.characters[i] === recipient) {
-                    recipientIndex = i;
-                    break;
-                }
-            }
-            
-            
-            recipient.sprite.destroy();
-            
-            // Is this necessary too?
-            gameScene.removeChild(recipient.sprite);
-            
-            tiles[cursor.position.x][cursor.position.y].character = null;
-            
-            opponentPlayer.characters.splice(recipientIndex, 1);
-        }
-        else if (status === "initiator dies") {
-            let initiatorIndex = null;
-            
-            for (let i = 0; i < activePlayer.characters.length; i++) {
-                if (activePlayer.characters[i] === initiator) {
-                    initiatorIndex = i;
-                    break;
-                }
-            }
-            
-            
-            initiator.sprite.destroy();
-            
-            // Is this necessary too?
-            gameScene.removeChild(initiator.sprite);
-            
-            tiles[initiator.position.x][initiator.position.y] = null;
-            
-            activePlayer.characters.splice(initiatorIndex, 1);
+        selectEnemyToAttack(currentTile);
+    }
+    
+    // If a was clicked and a character is currently selected
+    if (cursor.isSelected) {
+        // The player chose not to move, so simply mark their turn as moved
+        if ((cursor.startingTile.x === cursor.position.x &&
+            cursor.startingTile.y === cursor.position.y)) {
+            // Cursor is no longer selecting something
+            cursor.toggleSprites();
+            currentTile.character.hasMoved = true;
+            movesMessage.text = "Moves remaining:";
         }
         
-        cursor.currentSprite.visible = false;
-        cursor.currentSprite = cursor.notSelectedSprite;
-        cursor.currentSprite.visible = true;
-        cursor.currentSprite.position.set(
-            cursor.position.x * constants.TILESIZE,
-            cursor.position.y * constants.TILESIZE
-        );
+        // FIXME: Can't access property "character" of null occurs here sometimes
+        // Make sure no character exists on this tile, and then place the character
+        // on this tile after moving it
+        if (!currentTile.character) {
+            currentTile.character = cursor.selectedCharacter.move(cursor);
+            
+            // Set the old tile where the character originally came from to empty
+            tiles[cursor.startingTile.x][cursor.startingTile.y].character = null;
+            
+            // Cursor is no longer selecting something
+            cursor.toggleSprites();
+            
+            movesMessage.text = "Moves remaining:";
+        }
         
-        // FIXME: Need to make sure that if character dies, the correct player turn message
-        // is printed
-        // if(currentTile.character === null) {
-        //     turnMessage.text = "Player 2's turn!"
-        // }
-
+        let status = checkIfCanAttack();
+        
+        if (status === "switched mode") {
+            return;
+        }
+        
+        // TODO: Make this a function since it's duplicated in a bunch of places
         // Check each character the active player has
         // If all characters have moved, it is time to switch turns
         let allCharactersMoved = true;
@@ -611,127 +553,6 @@ aKey.press = () => {
                 }
             }
         }
-    }
-    
-    // The current cursor is in select mode
-    if (cursor.isSelected) {
-        // The player chose not to move, so simply mark their turn as moved
-        if ((cursor.startingTile.x === cursor.position.x &&
-            cursor.startingTile.y === cursor.position.y)) {
-            // Cursor is no longer selecting something
-            cursor.toggleSprites();
-            currentTile.character.hasMoved = true;
-        }
-        
-        // Make sure they don't try to move their character onto the same spot as another
-        // character
-        if(!tiles[cursor.position.x][cursor.position.y].character) {
-            
-            // Make sure no character exists on this tile, and then place the character
-            // on this tile after moving it
-            if(!currentTile.character) {
-                currentTile.character = cursor.selectedCharacter.move(cursor);
-                
-                // Set the old tile where the character originally came from to empty
-                tiles[cursor.startingTile.x][cursor.startingTile.y].character = null;
-                
-                // Cursor is no longer selecting something
-                cursor.toggleSprites();
-                
-                movesMessage.text = "Moves remaining:";
-            }
-        }
-        
-        // Check if player is adjacent to any opponents
-        let adjacentEnemies = [];
-        cursor.targetArray = [];
-        cursor.targetArrayIndex = 0;
-        
-        //debugger;
-        
-        // First check if character exists in above tile (but not if we're in the top row)
-        // If character exists, make sure it is an enemy character
-        if (cursor.selectedCharacter.position.y !== 0) {
-            let characterInTileAbove = tiles[cursor.position.x][cursor.position.y-1].character;
-            
-            if (characterInTileAbove &&
-                (characterInTileAbove.playerNumber !== activePlayer.playerNumber)) {
-                adjacentEnemies.push(characterInTileAbove);
-                cursor.targetArray.push(characterInTileAbove.sprite);
-            }
-        }
-        
-        if (cursor.selectedCharacter.position.y !== constants.NUM_TILES-1) {
-            let characterInTileBelow = tiles[cursor.position.x][cursor.position.y+1].character;
-            
-            if (characterInTileBelow &&
-                (characterInTileBelow.playerNumber !== activePlayer.playerNumber)) {
-                adjacentEnemies.push(characterInTileBelow);
-                cursor.targetArray.push(characterInTileBelow.sprite);
-            }
-        }
-        
-        if (cursor.selectedCharacter.position.x !== constants.NUM_TILES-1) {
-            let characterInTileRight = tiles[cursor.position.x+1][cursor.position.y].character;
-            
-            if (characterInTileRight &&
-                (characterInTileRight.playerNumber !== activePlayer.playerNumber)) {
-                adjacentEnemies.push(characterInTileRight);
-                cursor.targetArray.push(characterInTileRight.sprite);
-            }  
-        }
-        
-        if (cursor.selectedCharacter.position.x !== 0) {
-            let characterInTileLeft = tiles[cursor.position.x-1][cursor.position.y].character;
-            
-            if (characterInTileLeft &&
-                (characterInTileLeft.playerNumber !== activePlayer.playerNumber)) {
-                adjacentEnemies.push(characterInTileLeft);
-                cursor.targetArray.push(characterInTileLeft.sprite);
-            }
-        }
-        
-        // At least one enemy found, switch to target mode
-        if (adjacentEnemies[0]) {
-            cursor.currentSprite.visible = false;
-            cursor.currentSprite = cursor.targetSprite;
-            cursor.currentSprite.visible = true;
-            cursor.currentSprite.position.set(
-                adjacentEnemies[0].position.x * constants.TILESIZE,
-                adjacentEnemies[0].position.y * constants.TILESIZE
-            );
-            cursor.position.x = adjacentEnemies[0].position.x;
-            cursor.position.y = adjacentEnemies[0].position.y;
-            
-            return;
-        }
-        
-        // Check each character the active player has
-        // If all characters have moved, it is time to switch turns
-        let allCharactersMoved = true;
-        
-        for(let i=0; i < activePlayer.characters.length; i++) {
-            if(activePlayer.characters[i].hasMoved === false) {
-                allCharactersMoved = false;
-                break;
-            }
-        }
-        
-        if(allCharactersMoved) {
-            // TODO :: FIX ME!!! Need to make sure that if character dies, the correct player turn message
-            // is printed
-            if(currentTile.character === null) {
-                turnMessage.text = "Player 2's turn!";
-            }
-            else {
-                if(currentTile.character.playerNumber == 1) {
-                    turnMessage.text = "Player 2's turn!";
-                }
-                else {
-                    turnMessage.text = "Player 1's turn!";
-                }
-            }
-        }
         
         return;
     }
@@ -742,24 +563,14 @@ aKey.press = () => {
         activePlayer.characters.includes(currentTile.character) &&
         !currentTile.character.hasMoved) {
         
-        // Change the cursor sprite from unselected to selected
-        cursor.toggleSprites();
-        
-        // Save the character we just picked up into the cursor
-        cursor.selectedCharacter = currentTile.character;
-        
-        // Save the tile from which the character was moved from for future reference
-        cursor.startingTile.x = cursor.position.x;
-        cursor.startingTile.y = cursor.position.y;
-        
-        // Set the distance the character can travel
-        cursor.distanceLeft = currentTile.character.movement;
-        
-        movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
+        selectCharacter(currentTile);
     }
 };
 
-sKey.press = () => {
+keys.s.press = () => {
+    // Reset the sprite path if the player changed their mind
+    cursor.spritePath = [];
+    
     if (cursor.isSelected) {
         cursor.toggleSprites();
     }
@@ -777,3 +588,181 @@ sKey.press = () => {
     
     movesMessage.text = "Moves remaining:";
 };
+
+// *****************************************************************************
+
+function selectCharacter(currentTile) {
+    // Change the cursor sprite from unselected to selected
+    cursor.toggleSprites();
+    
+    // Save the character we just picked up into the cursor
+    cursor.selectedCharacter = currentTile.character;
+    
+    // Save the tile from which the character was moved from for future reference
+    cursor.startingTile.x = cursor.position.x;
+    cursor.startingTile.y = cursor.position.y;
+    
+    // Set the distance the character can travel
+    cursor.distanceLeft = currentTile.character.movement;
+    
+    movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
+}
+
+function selectEnemyToAttack(currentTile) {
+    let initiator = cursor.selectedCharacter;
+    let recipient = tiles[cursor.position.x][cursor.position.y].character;
+    
+    let status = initiator.attack(recipient);
+    
+    //console.log("Recipient HP: " + recipient.currentHP);
+    //console.log("Initiator HP: " + initiator.currentHP);
+    
+    if (status === "recipient dies") {
+        let opponentPlayer = (activePlayer === player1)
+            ? player2
+            : player1;
+        
+        let recipientIndex = null;
+        
+        for (let i = 0; i < opponentPlayer.characters.length; i++) {
+            if (opponentPlayer.characters[i] === recipient) {
+                recipientIndex = i;
+                break;
+            }
+        }
+        
+        recipient.sprite.destroy();
+        
+        // Is this necessary too?
+        gameScene.removeChild(recipient.sprite);
+        
+        tiles[cursor.position.x][cursor.position.y].character = null;
+        
+        opponentPlayer.characters.splice(recipientIndex, 1);
+    }
+    else if (status === "initiator dies") {
+        let initiatorIndex = null;
+        
+        for (let i = 0; i < activePlayer.characters.length; i++) {
+            if (activePlayer.characters[i] === initiator) {
+                initiatorIndex = i;
+                break;
+            }
+        }
+        
+        initiator.sprite.destroy();
+        
+        // Is this necessary too?
+        gameScene.removeChild(initiator.sprite);
+        
+        tiles[initiator.position.x][initiator.position.y] = null;
+        
+        activePlayer.characters.splice(initiatorIndex, 1);
+    }
+    
+    cursor.currentSprite.visible = false;
+    cursor.currentSprite = cursor.notSelectedSprite;
+    cursor.currentSprite.visible = true;
+    cursor.currentSprite.position.set(
+        cursor.position.x * constants.TILESIZE,
+        cursor.position.y * constants.TILESIZE
+    );
+    
+    // FIXME: Need to make sure that if character dies, the correct player turn message
+    // is printed
+    // if(currentTile.character === null) {
+    //     turnMessage.text = "Player 2's turn!"
+    // }
+
+    // Check each character the active player has
+    // If all characters have moved, it is time to switch turns
+    let allCharactersMoved = true;
+    
+    for(let i=0; i < activePlayer.characters.length; i++) {
+        if(activePlayer.characters[i].hasMoved === false) {
+            allCharactersMoved = false;
+            break;
+        }
+    }
+    
+    if(allCharactersMoved) {
+        // FIXME: Need to make sure that if character dies, the correct player turn message
+        // is printed
+        if(currentTile.character === null) {
+            turnMessage.text = "Player 2's turn!";
+        }
+        else {
+            if(currentTile.character.playerNumber == 1) {
+                turnMessage.text = "Player 2's turn!";
+            }
+            else {
+                turnMessage.text = "Player 1's turn!";
+            }
+        }
+    }
+}
+
+function checkIfCanAttack() {
+    // Check if player is adjacent to any opponents
+    let adjacentEnemies = [];
+    
+    cursor.targetArray = [];
+    cursor.targetArrayIndex = 0;
+    
+    // First check if character exists in above tile (but not if we're in the top row)
+    // If character exists, make sure it is an enemy character
+    if (cursor.selectedCharacter.position.y !== 0) {
+        let characterInTileAbove = tiles[cursor.position.x][cursor.position.y-1].character;
+        
+        if (characterInTileAbove &&
+            (characterInTileAbove.playerNumber !== activePlayer.playerNumber)) {
+            adjacentEnemies.push(characterInTileAbove);
+            cursor.targetArray.push(characterInTileAbove.sprite);
+        }
+    }
+    
+    if (cursor.selectedCharacter.position.y !== constants.NUM_TILES-1) {
+        let characterInTileBelow = tiles[cursor.position.x][cursor.position.y+1].character;
+        
+        if (characterInTileBelow &&
+            (characterInTileBelow.playerNumber !== activePlayer.playerNumber)) {
+            adjacentEnemies.push(characterInTileBelow);
+            cursor.targetArray.push(characterInTileBelow.sprite);
+        }
+    }
+    
+    if (cursor.selectedCharacter.position.x !== constants.NUM_TILES-1) {
+        let characterInTileRight = tiles[cursor.position.x+1][cursor.position.y].character;
+        
+        if (characterInTileRight &&
+            (characterInTileRight.playerNumber !== activePlayer.playerNumber)) {
+            adjacentEnemies.push(characterInTileRight);
+            cursor.targetArray.push(characterInTileRight.sprite);
+        }  
+    }
+    
+    if (cursor.selectedCharacter.position.x !== 0) {
+        let characterInTileLeft = tiles[cursor.position.x-1][cursor.position.y].character;
+        
+        if (characterInTileLeft &&
+            (characterInTileLeft.playerNumber !== activePlayer.playerNumber)) {
+            adjacentEnemies.push(characterInTileLeft);
+            cursor.targetArray.push(characterInTileLeft.sprite);
+        }
+    }
+    
+    // At least one enemy found, switch to target mode
+    if (adjacentEnemies[0]) {
+        cursor.currentSprite.visible = false;
+        cursor.currentSprite = cursor.targetSprite;
+        cursor.currentSprite.visible = true;
+        cursor.currentSprite.position.set(
+            adjacentEnemies[0].position.x * constants.TILESIZE,
+            adjacentEnemies[0].position.y * constants.TILESIZE
+        );
+        cursor.position.x = adjacentEnemies[0].position.x;
+        cursor.position.y = adjacentEnemies[0].position.y;
+        
+        return "switched mode";
+    }
+}

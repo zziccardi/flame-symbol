@@ -1,7 +1,7 @@
 {
   "Lyn": {
     "weapon-type": "sword",
-    "movement": "infantry",
+    "movement-type": "infantry",
     "stats": {
       "hp": 37,
       "attack": 28,
@@ -10,5 +10,45 @@
       "resistance": 29
     },
     "weapon": "Sol Katti"
+  },
+  
+  "Marth": {
+    "weapon-type": "sword",
+    "movement-type": "infantry",
+    "stats": {
+      "hp": 41,
+      "attack": 31,
+      "speed": 34,
+      "defense": 29,
+      "resistance": 23
+    },
+    "weapon": "Falchion"
+  },
+  
+  "Frederick": {
+    "weapon-type": "axe",
+    "movement-type": "cavalry",
+    "stats": {
+      "hp": 43,
+      "attack": 35,
+      "speed": 25,
+      "defense": 36,
+      "resistance": 14
+    },
+    "weapon": "Steel Axe"
+  },
+  
+  "Hinoka": {
+    "weapon-type": "lance",
+    "movement-type": "flier",
+    "stats": {
+      "hp": 41,
+      "attack": 35,
+      "speed": 32,
+      "defense": 25,
+      "resistance": 24
+    },
+    "weapon": "Hinoka's Spear"
   }
+
 }

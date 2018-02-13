@@ -1,5 +1,4 @@
 import constants from "../constants.js";
-import Character from "./Character.js";
 
 const TextStyle = PIXI.TextStyle;
 const Text      = PIXI.Text;
@@ -13,66 +12,73 @@ const hpTextStyle = new TextStyle({
 
 
 export default class HealthBar {
-    constructor(char, canvas) {
-        this.character      = char;
-        this.canvas         = canvas;
+    constructor(canvas) {
+        this.canvas             = canvas;
+        this.healthBarObject    = null;
+        this.hpTextObject       = null;
     }
 
-    makeHealthBar(charCounter) {
-        //Values dependant on which team the character is on
+    makeHealthBar(character, charCounter) {
+        let counter = charCounter;
+        
+        // Values dependant on which team the character is on
         let code;
         let spacing;
-        let counter;
         
-        //Check the character's team
-        if(this.character.playerNumber === 1) {
+        // Check the character's team
+        if(character.playerNumber === 1) {
             code = 0x0000ff;
             spacing = 50;
-            counter = charCounter;
         }
         else {
             code = 0xff0000;
             spacing = 225;
-            counter = charCounter;
         }
         
-        //Write the character's name above the HP Bar
-        let characterName = new Text(this.character.name, hpTextStyle);
-        characterName.x = constants.BOARDSIZE + spacing;
-        characterName.y = (counter*40) + 10;
-        this.canvas.addChild(characterName);
-    
-        //Create the HP bar
-        let healthBar = new PIXI.DisplayObjectContainer();
-        healthBar.position.set(constants.BOARDSIZE + spacing, (counter*40) + 25);
-        this.canvas.addChild(healthBar);
+        // Create the HP bar container
+        // This container will contain all the individual pieces of the bar
+        // (The HP text, name text, red rectangle, etc.)
+        this.healthBarObject = new PIXI.DisplayObjectContainer();
+        this.healthBarObject.position.set(constants.BOARDSIZE + spacing, (counter*40) + 25);
+        this.canvas.addChild(this.healthBarObject);
 
-        //Create the black background rectangle
+        // Create the black background rectangle
         let innerBar = new PIXI.Graphics();
         innerBar.beginFill(0x000000);
-        innerBar.drawRect(0, 0, this.character.stats.hp * constants.PIXEL_PER_HP, 15);
+        innerBar.drawRect(0, 0, character.stats.hp * constants.PIXEL_PER_HP, 15);
         innerBar.endFill();
-        healthBar.addChild(innerBar);
+        this.healthBarObject.addChild(innerBar);
 
-        //Create the front red rectangle
+        // Create the front red rectangle
         let outerBar = new PIXI.Graphics();
         outerBar.beginFill(code);
-        outerBar.drawRect(0, 0, this.character.stats.hp * constants.PIXEL_PER_HP, 15);
+        outerBar.drawRect(0, 0, character.stats.hp * constants.PIXEL_PER_HP, 15);
         outerBar.endFill();
-        healthBar.addChild(outerBar);
+        this.healthBarObject.addChild(outerBar);
 
-        //Save the bars into the character for later access
-        healthBar.outer = outerBar;
+        // Save the outer bar as a field in the health bar container for later access
+        this.healthBarObject.outer = outerBar;
         
-        //Save the HP bar for later alteration
-        this.character.outerHPBar = healthBar.outer;
+        // Write the character's name above the HP Bar
+        // Add the character name text as a child in the Health Bar Graphic
+        let characterName = new Text(character.name, hpTextStyle);
+        characterName.x = 0;
+        characterName.y = -17;
+        this.healthBarObject.addChild(characterName);
         
-        //Write a number over the hp bar to represent the numerical HP
-        let characterHP = new Text(`${this.character.currentHP} / ${this.character.stats.hp}`, hpTextStyle);
-        characterHP.x = constants.BOARDSIZE+spacing;
-        characterHP.y = (counter*40) + 25;
-        this.canvas.addChild(characterHP);
+        // Write the character's HP inside the HP Bar
+        // Add the HP text as a child in the Health Bar Graphic
+        let characterHP = new Text(`${character.currentHP} / ${character.stats.hp}`, hpTextStyle);
+        characterHP.x = 3;
+        characterHP.y = 0;
+        this.healthBarObject.addChild(characterHP);
         
-        this.character.hpText = characterHP;
+        // Save the HP text into the Health Bar for later access
+        this.healthBarObject.hpTextObject = characterHP;
+    }
+    
+    decreaseHealth(currentHP, maxHP) {
+        this.healthBarObject.outer.width = currentHP * constants.PIXEL_PER_HP;
+        this.healthBarObject.hpTextObject.text = `${currentHP} / ${maxHP}`;
     }
 }

@@ -46,9 +46,14 @@ export default class Character {
         this.healthBar = null;
         this.currentHP = this.stats.hp;
         this.hpIsScrolling = false;
-        this.outerHPBar = null;
-        this.hpText = null;
         this.scrollingHP = this.currentHP;
+        
+        //Movement information
+        this.movement = {
+            isMoving : false,
+            spritePath : [],
+            movedInSprite : 0
+        };
     }
     
     /**
@@ -79,6 +84,7 @@ export default class Character {
     attack(recipient) {
         console.log(`${this.name} initiates on ${recipient.name}`);
         
+        
         // 1. Initiate on opponent
         let status = this.doAttackCalculations(recipient);
         
@@ -92,6 +98,7 @@ export default class Character {
         
         console.log(`${recipient.name} counterattacks ${this.name}`);
         
+        
         // 2. Opponent counterattacks
         status = recipient.doAttackCalculations(this);
         
@@ -101,8 +108,6 @@ export default class Character {
         }
         
         
-        
-        
         // 3. If the initiator is significantly faster than the recipient, the
         // former does a follow-up attack
         if (this.stats.speed - recipient.stats.speed >= 5) {
@@ -110,6 +115,8 @@ export default class Character {
             
             return this.doAttackCalculations(recipient);
         }
+        
+        
         // 4. If the recipient is significantly faster than the initiator, the
         // former does a second (follow-up) counterattack
         else if (recipient.stats.speed - this.stats.speed >= 5) {
@@ -156,13 +163,7 @@ export default class Character {
             recipient.currentHP = 0;
         }
         
-        // TODO: Move the following two lines to a new method in a class that
-        // manages the health bars so that this function only deals with doing
-        // attack calculations
-        
-        // Decrease health bar
-        recipient.outerHPBar.width = recipient.currentHP * constants.PIXEL_PER_HP;
-        recipient.hpText.text = `${recipient.currentHP} / ${recipient.stats.hp}`
+        recipient.healthBar.decreaseHealth(recipient.currentHP, recipient.stats.hp);
         
         console.log("Recipient HP: " + recipient.currentHP);
         

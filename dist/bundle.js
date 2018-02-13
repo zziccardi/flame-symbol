@@ -60,7 +60,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 3);
+/******/ 	return __webpack_require__(__webpack_require__.s = 2);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -84,233 +84,23 @@ const constants = {
 
 /***/ }),
 /* 1 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__classes_Weapon_js__ = __webpack_require__(4);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__data_characters_json__ = __webpack_require__(2);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__data_characters_json___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__data_characters_json__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__constants_js__ = __webpack_require__(0);
-
-
-
-
-
-
-
-
-class Character {
-    
-    /**
-     * Create a Character by reading its data from the JSON file
-     * @param {String} name - the name of the character this object will represent
-     */
-    constructor(name, team) {        
-        let data = __WEBPACK_IMPORTED_MODULE_1__data_characters_json___default.a[name];
-        
-        this.name             = name;
-        this.weaponType       = data["weapon-type"];
-        this.movementType     = data["movement-type"];
-        this.stats            = data.stats;
-        this.weapon           = new __WEBPACK_IMPORTED_MODULE_0__classes_Weapon_js__["a" /* default */](data.weapon, this.weaponType);
-        this.playerNumber     = team;
-        this.hasMoved         = false;
-        this.position = {
-            x: null,
-            y: null
-        };
-        this.movement = 0;
-        this.sprite   = null;
-        
-        if(this.movementType === "infantry") {
-            this.movement = 5;
-        }
-        else if(this.movementType === "armored") {
-            this.movement = 3;
-        }
-        else if(this.movementType === "cavalry") {
-            this.movement = 7;
-        }
-        else if(this.movementType === "flier") {
-            this.movement = 6;
-        }
-
-        // Healthbar and Health related items
-        this.healthBar = null;
-        this.currentHP = this.stats.hp;
-        this.hpIsScrolling = false;
-        this.outerHPBar = null;
-        this.hpText = null;
-        this.scrollingHP = this.currentHP;
-    }
-    
-    /**
-     * Move the character to a new tile
-     * @param {Cursor} cursor - the cursor instance (indicates the destination)
-     * @return this - a reference to this character, to be added to the destination tile
-     */
-    move(cursor) {
-        // Move the character based on where the cursor currently is
-        //this.sprite.position.set(
-        //    cursor.position.x * constants.TILESIZE,
-        //    cursor.position.y * constants.TILESIZE
-        //);
-        
-        this.hasMoved = true;
-        cursor.spriteMoving = true;
-        this.position.x = cursor.position.x;
-        this.position.y = cursor.position.y;
-        
-        // Update the destination tile to include the character that just moved there
-        return this;
-    }
-    
-    /**
-     * Attack a character on the opponent's team
-     * @param {Character} recipient - the other player's unit who is being attacked
-     */
-    attack(recipient) {
-        console.log(`${this.name} initiates on ${recipient.name}`);
-        
-        // 1. Initiate on opponent
-        let status = this.doAttackCalculations(recipient);
-        
-        // The recipient dies, so end combat
-        if (status === "recipient dies") {
-            return status;
-        }
-        
-        //this.hpIsScrolling = true;;
-        //while(this.hpIsScrolling) {}
-        
-        console.log(`${recipient.name} counterattacks ${this.name}`);
-        
-        // 2. Opponent counterattacks
-        status = recipient.doAttackCalculations(this);
-        
-        // The initiator was killed on the recipient's counterattack, so end combat
-        if (status === "recipient dies") {
-            return "initiator dies";
-        }
-        
-        
-        
-        
-        // 3. If the initiator is significantly faster than the recipient, the
-        // former does a follow-up attack
-        if (this.stats.speed - recipient.stats.speed >= 5) {
-            console.log(`${this.name} performs a follow-up attack on ${recipient.name}`);
-            
-            return this.doAttackCalculations(recipient);
-        }
-        // 4. If the recipient is significantly faster than the initiator, the
-        // former does a second (follow-up) counterattack
-        else if (recipient.stats.speed - this.stats.speed >= 5) {
-            console.log(`${recipient.name} performs a follow-up counterattack on ${this.name}`);
-            
-            return recipient.doAttackCalculations(this);
-        }
-    }
-    
-    /**
-     * Determine the damage to be dealt and subtract it from the opponent's HP
-     * @param {Character} recipient - the character that receives the attack
-     * @return {String} status - a string indicating whether the recpient dies,
-     * or null otherwise
-     * @private
-     */
-    doAttackCalculations(recipient) {
-        // Add the weapon's might to this character's attack
-        let attackStrength = this.stats.attack + this.weapon.might;
-        
-        console.log("Attack strength: " + attackStrength);
-        
-        attackStrength = Math.floor(attackStrength * this.getEffectivenessMultiplier(recipient));
-        
-        console.log("Attack strength with multiplier: " + attackStrength);
-        
-        // TODO: Handle magic and ranged attacks
-        
-        // Subtract the opponent's defense from the damage to determine how much
-        // to lower the opponent's HP
-        let damage = attackStrength - recipient.stats.defense;
-        
-        console.log("Damage to subtract from HP: " + damage);
-        
-        // The recipient's defense is high enough that no damage is dealt
-        if (damage <= 0) {
-            return null;
-        }
-        
-        recipient.currentHP -= damage;
-        
-        // If a character's hp goes below 0, set it to 0 for HP bar purposes
-        if (recipient.currentHP < 0) {
-            recipient.currentHP = 0;
-        }
-        
-        // TODO: Move the following two lines to a new method in a class that
-        // manages the health bars so that this function only deals with doing
-        // attack calculations
-        
-        // Decrease health bar
-        recipient.outerHPBar.width = recipient.currentHP * __WEBPACK_IMPORTED_MODULE_2__constants_js__["a" /* default */].PIXEL_PER_HP;
-        recipient.hpText.text = `${recipient.currentHP} / ${recipient.stats.hp}`
-        
-        console.log("Recipient HP: " + recipient.currentHP);
-        
-        if (recipient.currentHP === 0) {
-            return "recipient dies";
-        }
-        
-        return null;
-    }
-    
-    /**
-     * Modify the attack strength depending on the weapon effectiveness
-     * @param {Character} recipient - the character that receives the attack
-     * @return {Number} multiplier
-     * @private
-     */
-    getEffectivenessMultiplier(recipient) {
-        if ((this.weaponType === "sword" && recipient.weaponType === "axe")   ||
-            (this.weaponType === "lance" && recipient.weaponType === "sword") ||
-            (this.weaponType === "axe"   && recipient.weaponType === "lance")) {
-            return 1.2;
-        }
-        
-        if ((this.weaponType === "sword" && recipient.weaponType === "lance") ||
-            (this.weaponType === "lance" && recipient.weaponType === "axe")   ||
-            (this.weaponType === "axe"   && recipient.weaponType === "sword")) {
-            return 0.8;
-        }
-        
-        return 1;
-    }
-}
-/* harmony export (immutable) */ __webpack_exports__["a"] = Character;
-
-
-
-/***/ }),
-/* 2 */
 /***/ (function(module, exports) {
 
 module.exports = {"Lyn":{"weapon-type":"sword","movement-type":"infantry","stats":{"hp":37,"attack":28,"speed":37,"defense":26,"resistance":29},"weapon":"Sol Katti"},"Marth":{"weapon-type":"sword","movement-type":"infantry","stats":{"hp":41,"attack":31,"speed":34,"defense":29,"resistance":23},"weapon":"Falchion"},"Frederick":{"weapon-type":"axe","movement-type":"cavalry","stats":{"hp":43,"attack":35,"speed":25,"defense":36,"resistance":14},"weapon":"Steel Axe"},"Hinoka":{"weapon-type":"lance","movement-type":"flier","stats":{"hp":41,"attack":35,"speed":32,"defense":25,"resistance":24},"weapon":"Hinoka's Spear"}}
 
 /***/ }),
-/* 3 */
+/* 2 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__classes_Character_js__ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__classes_Character_js__ = __webpack_require__(3);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__classes_Tile_js__ = __webpack_require__(6);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__classes_Player_js__ = __webpack_require__(7);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__classes_Cursor_js__ = __webpack_require__(8);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__classes_HealthBar_js__ = __webpack_require__(9);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__utilities_createKey_js__ = __webpack_require__(10);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__data_characters_json__ = __webpack_require__(2);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__data_characters_json__ = __webpack_require__(1);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__data_characters_json___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_6__data_characters_json__);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_7__constants_js__ = __webpack_require__(0);
 
@@ -458,28 +248,22 @@ function setup() {
         });
         
         characters.forEach((char) => {
-            //Values dependant on which team the character is on
-            let code;
-            let spacing;
+            //Value dependant on which team the character is on
             let counter;
             
             //Check the character's team
             if(char.playerNumber === 1) {
-                code = 0x0000ff;
-                spacing = 50;
                 counter = player1Counter;
             }
             else {
-                code = 0xff0000;
-                spacing = 225;
                 counter = player2Counter;
             }
             
-            //Create the HP bar
-            let healthBar = new __WEBPACK_IMPORTED_MODULE_4__classes_HealthBar_js__["a" /* default */](char, gameScene);
-            healthBar.makeHealthBar(counter);
+            // Create the HP bar
+            char.healthBar = new __WEBPACK_IMPORTED_MODULE_4__classes_HealthBar_js__["a" /* default */](gameScene);
+            char.healthBar.makeHealthBar(char, counter);
      
-            // Set the filename
+            // Set the filename for the character sprite
             let fileName = char.name.toLowerCase();
             
             if (char.playerNumber == 1) {
@@ -567,8 +351,7 @@ function setup() {
     gameOverScene = new Container();
     app.stage.addChild(gameOverScene);
     
-    // Set gameOverScene to false since game isn't over when the game initially
-    // starts
+    // Set gameOverScene to false since game isn't over when the game initially starts
     gameOverScene.visible = false;
     
     // Create the text sprite and add it to the gameOverScene
@@ -607,7 +390,6 @@ function gameOver() {
 }
 
 function play() {
-    
     if(cursor.spriteMoving) {
         //If no more tiles to move, stop movement
         if(!cursor.spritePath[0]) {
@@ -649,20 +431,9 @@ function play() {
         return;
     }
     
-    // Check each character the active player has
-    // If all characters have moved, it is time to switch turns
-    let allCharactersMoved = true;
-    
-    for(let i=0; i < activePlayer.characters.length; i++) {
-        if(activePlayer.characters[i].hasMoved === false) {
-            allCharactersMoved = false;
-            break;
-        }
-    }
-    
-    // All characters for the active player have moved, so switch characters and
-    // reset the characters for the new active player to be able to be moved again
-    if(allCharactersMoved) {
+    // If all characters have moved for the current active player, it is time to switch turns
+    // Reset the characters for the new active player to be able to be moved again
+    if(checkIfAllCharsMoved()) {
         // Prepare for this player's next turn
         activePlayer.characters.forEach((char) => {
             char.hasMoved = false;
@@ -677,7 +448,6 @@ function play() {
             turn++;
             //turnMessage.text = "Player 1's turn!";
         }
-        //alert(`It is ${activePlayer.color} team's turn`)
     }
     
     
@@ -688,6 +458,18 @@ function play() {
 
 function changeMovementText() {
     movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
+}
+
+// Check each character the active player has
+// If all characters have moved for the current player, return true; false otherwise
+function checkIfAllCharsMoved() {
+    for(let i=0; i < activePlayer.characters.length; i++) {
+        if(activePlayer.characters[i].hasMoved === false) {
+            return false;
+        }
+    }
+    
+    return true;
 }
 
 keys.down.press = () => {
@@ -730,13 +512,13 @@ keys.left.press = () => {
     if(cursor.position.x > 0 && cursor.currentSprite === cursor.targetSprite) {
         cursor.currentSprite.x  = cursor.targetArray[cursor.targetArrayIndex].position.x;
         cursor.currentSprite.y  = cursor.targetArray[cursor.targetArrayIndex].position.y;
-        cursor.position.x       = cursor.targetArray[cursor.targetArrayIndex].position.x;
-        cursor.position.y       = cursor.targetArray[cursor.targetArrayIndex].position.y;
+        // cursor.position.x       = cursor.targetArray[cursor.targetArrayIndex].position.x;
+        // cursor.position.y       = cursor.targetArray[cursor.targetArrayIndex].position.y;
         
-        if(cursor.targetArrayIndex === cursor.targetArray.length-1) cursor.targetArrayIndex = 0;
+        cursor.selectedCharacter = cursor.targetArray[cursor.targetArrayIndex];
+        
+        if (cursor.targetArrayIndex === cursor.targetArray.length-1) cursor.targetArrayIndex = 0;
         else cursor.targetArrayIndex++;
-        
-        //cursor.selectedCharacter = cursor.targetArray[cursor.targetArrayIndex];
         
         return;
     }
@@ -760,13 +542,13 @@ keys.right.press = () => {
     if(cursor.position.x < __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].NUM_TILES-1 && cursor.currentSprite === cursor.targetSprite) {
         cursor.currentSprite.x  = cursor.targetArray[cursor.targetArrayIndex].position.x;
         cursor.currentSprite.y  = cursor.targetArray[cursor.targetArrayIndex].position.y;
-        cursor.position.x       = cursor.targetArray[cursor.targetArrayIndex].position.x;
-        cursor.position.y       = cursor.targetArray[cursor.targetArrayIndex].position.y;
+        // cursor.position.x       = cursor.targetArray[cursor.targetArrayIndex].position.x;
+        // cursor.position.y       = cursor.targetArray[cursor.targetArrayIndex].position.y;
+        
+        cursor.selectedCharacter = cursor.targetArray[cursor.targetArrayIndex];
         
         if(cursor.targetArrayIndex === cursor.targetArray.length-1) cursor.targetArrayIndex = 0;
         else cursor.targetArrayIndex++;
-        
-        //cursor.selectedCharacter = cursor.targetArray[cursor.targetArrayIndex];
         
         return;
     }
@@ -841,19 +623,8 @@ keys.a.press = () => {
             return;
         }
         
-        // TODO: Make this a function since it's duplicated in a bunch of places
-        // Check each character the active player has
-        // If all characters have moved, it is time to switch turns
-        let allCharactersMoved = true;
-        
-        for(let i=0; i < activePlayer.characters.length; i++) {
-            if(activePlayer.characters[i].hasMoved === false) {
-                allCharactersMoved = false;
-                break;
-            }
-        }
-        
-        if(allCharactersMoved) {
+        // If all characters have moved for the current active player, it is time to switch turns
+        if(checkIfAllCharsMoved()) {
             // FIXME: Need to make sure that if character dies, the correct player turn message
             // is printed
             if(currentTile.character === null) {
@@ -988,19 +759,9 @@ function selectEnemyToAttack(currentTile) {
     // if(currentTile.character === null) {
     //     turnMessage.text = "Player 2's turn!"
     // }
-
-    // Check each character the active player has
-    // If all characters have moved, it is time to switch turns
-    let allCharactersMoved = true;
     
-    for(let i=0; i < activePlayer.characters.length; i++) {
-        if(activePlayer.characters[i].hasMoved === false) {
-            allCharactersMoved = false;
-            break;
-        }
-    }
-    
-    if(allCharactersMoved) {
+    // If all characters have moved for the current active player, it is time to switch turns
+    if(checkIfAllCharsMoved()) {
         // FIXME: Need to make sure that if character dies, the correct player turn message
         // is printed
         if(currentTile.character === null) {
@@ -1081,6 +842,210 @@ function checkIfCanAttack() {
         return "switched mode";
     }
 }
+
+
+/***/ }),
+/* 3 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__classes_Weapon_js__ = __webpack_require__(4);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__data_characters_json__ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__data_characters_json___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__data_characters_json__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__constants_js__ = __webpack_require__(0);
+
+
+
+
+
+
+
+
+class Character {
+    
+    /**
+     * Create a Character by reading its data from the JSON file
+     * @param {String} name - the name of the character this object will represent
+     */
+    constructor(name, team) {        
+        let data = __WEBPACK_IMPORTED_MODULE_1__data_characters_json___default.a[name];
+        
+        this.name             = name;
+        this.weaponType       = data["weapon-type"];
+        this.movementType     = data["movement-type"];
+        this.stats            = data.stats;
+        this.weapon           = new __WEBPACK_IMPORTED_MODULE_0__classes_Weapon_js__["a" /* default */](data.weapon, this.weaponType);
+        this.playerNumber     = team;
+        this.hasMoved         = false;
+        this.position = {
+            x: null,
+            y: null
+        };
+        this.movement = 0;
+        this.sprite   = null;
+        
+        if(this.movementType === "infantry") {
+            this.movement = 5;
+        }
+        else if(this.movementType === "armored") {
+            this.movement = 3;
+        }
+        else if(this.movementType === "cavalry") {
+            this.movement = 7;
+        }
+        else if(this.movementType === "flier") {
+            this.movement = 6;
+        }
+
+        // Healthbar and Health related items
+        this.healthBar = null;
+        this.currentHP = this.stats.hp;
+        this.hpIsScrolling = false;
+        this.scrollingHP = this.currentHP;
+    }
+    
+    /**
+     * Move the character to a new tile
+     * @param {Cursor} cursor - the cursor instance (indicates the destination)
+     * @return this - a reference to this character, to be added to the destination tile
+     */
+    move(cursor) {
+        // Move the character based on where the cursor currently is
+        //this.sprite.position.set(
+        //    cursor.position.x * constants.TILESIZE,
+        //    cursor.position.y * constants.TILESIZE
+        //);
+        
+        this.hasMoved = true;
+        cursor.spriteMoving = true;
+        this.position.x = cursor.position.x;
+        this.position.y = cursor.position.y;
+        
+        // Update the destination tile to include the character that just moved there
+        return this;
+    }
+    
+    /**
+     * Attack a character on the opponent's team
+     * @param {Character} recipient - the other player's unit who is being attacked
+     */
+    attack(recipient) {
+        console.log(`${this.name} initiates on ${recipient.name}`);
+        
+        
+        // 1. Initiate on opponent
+        let status = this.doAttackCalculations(recipient);
+        
+        // The recipient dies, so end combat
+        if (status === "recipient dies") {
+            return status;
+        }
+        
+        //this.hpIsScrolling = true;;
+        //while(this.hpIsScrolling) {}
+        
+        console.log(`${recipient.name} counterattacks ${this.name}`);
+        
+        
+        // 2. Opponent counterattacks
+        status = recipient.doAttackCalculations(this);
+        
+        // The initiator was killed on the recipient's counterattack, so end combat
+        if (status === "recipient dies") {
+            return "initiator dies";
+        }
+        
+        
+        // 3. If the initiator is significantly faster than the recipient, the
+        // former does a follow-up attack
+        if (this.stats.speed - recipient.stats.speed >= 5) {
+            console.log(`${this.name} performs a follow-up attack on ${recipient.name}`);
+            
+            return this.doAttackCalculations(recipient);
+        }
+        
+        
+        // 4. If the recipient is significantly faster than the initiator, the
+        // former does a second (follow-up) counterattack
+        else if (recipient.stats.speed - this.stats.speed >= 5) {
+            console.log(`${recipient.name} performs a follow-up counterattack on ${this.name}`);
+            
+            return recipient.doAttackCalculations(this);
+        }
+    }
+    
+    /**
+     * Determine the damage to be dealt and subtract it from the opponent's HP
+     * @param {Character} recipient - the character that receives the attack
+     * @return {String} status - a string indicating whether the recpient dies,
+     * or null otherwise
+     * @private
+     */
+    doAttackCalculations(recipient) {
+        // Add the weapon's might to this character's attack
+        let attackStrength = this.stats.attack + this.weapon.might;
+        
+        console.log("Attack strength: " + attackStrength);
+        
+        attackStrength = Math.floor(attackStrength * this.getEffectivenessMultiplier(recipient));
+        
+        console.log("Attack strength with multiplier: " + attackStrength);
+        
+        // TODO: Handle magic and ranged attacks
+        
+        // Subtract the opponent's defense from the damage to determine how much
+        // to lower the opponent's HP
+        let damage = attackStrength - recipient.stats.defense;
+        
+        console.log("Damage to subtract from HP: " + damage);
+        
+        // The recipient's defense is high enough that no damage is dealt
+        if (damage <= 0) {
+            return null;
+        }
+        
+        recipient.currentHP -= damage;
+        
+        // If a character's hp goes below 0, set it to 0 for HP bar purposes
+        if (recipient.currentHP < 0) {
+            recipient.currentHP = 0;
+        }
+        
+        recipient.healthBar.decreaseHealth(recipient.currentHP, recipient.stats.hp);
+        
+        console.log("Recipient HP: " + recipient.currentHP);
+        
+        if (recipient.currentHP === 0) {
+            return "recipient dies";
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Modify the attack strength depending on the weapon effectiveness
+     * @param {Character} recipient - the character that receives the attack
+     * @return {Number} multiplier
+     * @private
+     */
+    getEffectivenessMultiplier(recipient) {
+        if ((this.weaponType === "sword" && recipient.weaponType === "axe")   ||
+            (this.weaponType === "lance" && recipient.weaponType === "sword") ||
+            (this.weaponType === "axe"   && recipient.weaponType === "lance")) {
+            return 1.2;
+        }
+        
+        if ((this.weaponType === "sword" && recipient.weaponType === "lance") ||
+            (this.weaponType === "lance" && recipient.weaponType === "axe")   ||
+            (this.weaponType === "axe"   && recipient.weaponType === "sword")) {
+            return 0.8;
+        }
+        
+        return 1;
+    }
+}
+/* harmony export (immutable) */ __webpack_exports__["a"] = Character;
+
 
 
 /***/ }),
@@ -1264,8 +1229,6 @@ class Cursor {
 
 "use strict";
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__constants_js__ = __webpack_require__(0);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__Character_js__ = __webpack_require__(1);
-
 
 
 const TextStyle = PIXI.TextStyle;
@@ -1280,67 +1243,74 @@ const hpTextStyle = new TextStyle({
 
 
 class HealthBar {
-    constructor(char, canvas) {
-        this.character      = char;
-        this.canvas         = canvas;
+    constructor(canvas) {
+        this.canvas             = canvas;
+        this.healthBarObject    = null;
+        this.hpTextObject       = null;
     }
 
-    makeHealthBar(charCounter) {
-        //Values dependant on which team the character is on
+    makeHealthBar(character, charCounter) {
+        let counter = charCounter;
+        
+        // Values dependant on which team the character is on
         let code;
         let spacing;
-        let counter;
         
-        //Check the character's team
-        if(this.character.playerNumber === 1) {
+        // Check the character's team
+        if(character.playerNumber === 1) {
             code = 0x0000ff;
             spacing = 50;
-            counter = charCounter;
         }
         else {
             code = 0xff0000;
             spacing = 225;
-            counter = charCounter;
         }
         
-        //Write the character's name above the HP Bar
-        let characterName = new Text(this.character.name, hpTextStyle);
-        characterName.x = __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].BOARDSIZE + spacing;
-        characterName.y = (counter*40) + 10;
-        this.canvas.addChild(characterName);
-    
-        //Create the HP bar
-        let healthBar = new PIXI.DisplayObjectContainer();
-        healthBar.position.set(__WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].BOARDSIZE + spacing, (counter*40) + 25);
-        this.canvas.addChild(healthBar);
+        // Create the HP bar container
+        // This container will contain all the individual pieces of the bar
+        // (The HP text, name text, red rectangle, etc.)
+        this.healthBarObject = new PIXI.DisplayObjectContainer();
+        this.healthBarObject.position.set(__WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].BOARDSIZE + spacing, (counter*40) + 25);
+        this.canvas.addChild(this.healthBarObject);
 
-        //Create the black background rectangle
+        // Create the black background rectangle
         let innerBar = new PIXI.Graphics();
         innerBar.beginFill(0x000000);
-        innerBar.drawRect(0, 0, this.character.stats.hp * __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].PIXEL_PER_HP, 15);
+        innerBar.drawRect(0, 0, character.stats.hp * __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].PIXEL_PER_HP, 15);
         innerBar.endFill();
-        healthBar.addChild(innerBar);
+        this.healthBarObject.addChild(innerBar);
 
-        //Create the front red rectangle
+        // Create the front red rectangle
         let outerBar = new PIXI.Graphics();
         outerBar.beginFill(code);
-        outerBar.drawRect(0, 0, this.character.stats.hp * __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].PIXEL_PER_HP, 15);
+        outerBar.drawRect(0, 0, character.stats.hp * __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].PIXEL_PER_HP, 15);
         outerBar.endFill();
-        healthBar.addChild(outerBar);
+        this.healthBarObject.addChild(outerBar);
 
-        //Save the bars into the character for later access
-        healthBar.outer = outerBar;
+        // Save the outer bar as a field in the health bar container for later access
+        this.healthBarObject.outer = outerBar;
         
-        //Save the HP bar for later alteration
-        this.character.outerHPBar = healthBar.outer;
+        // Write the character's name above the HP Bar
+        // Add the character name text as a child in the Health Bar Graphic
+        let characterName = new Text(character.name, hpTextStyle);
+        characterName.x = 0;
+        characterName.y = -17;
+        this.healthBarObject.addChild(characterName);
         
-        //Write a number over the hp bar to represent the numerical HP
-        let characterHP = new Text(`${this.character.currentHP} / ${this.character.stats.hp}`, hpTextStyle);
-        characterHP.x = __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].BOARDSIZE+spacing;
-        characterHP.y = (counter*40) + 25;
-        this.canvas.addChild(characterHP);
+        // Write the character's HP inside the HP Bar
+        // Add the HP text as a child in the Health Bar Graphic
+        let characterHP = new Text(`${character.currentHP} / ${character.stats.hp}`, hpTextStyle);
+        characterHP.x = 3;
+        characterHP.y = 0;
+        this.healthBarObject.addChild(characterHP);
         
-        this.character.hpText = characterHP;
+        // Save the HP text into the Health Bar for later access
+        this.healthBarObject.hpTextObject = characterHP;
+    }
+    
+    decreaseHealth(currentHP, maxHP) {
+        this.healthBarObject.outer.width = currentHP * __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].PIXEL_PER_HP;
+        this.healthBarObject.hpTextObject.text = `${currentHP} / ${maxHP}`;
     }
 }
 /* harmony export (immutable) */ __webpack_exports__["a"] = HealthBar;

@@ -25,9 +25,6 @@ const Text         = PIXI.Text;
 let app = null;
 let gameScene, gameOverScene, state;
 
-// FIXME: Never used
-let turn = 1;
-
 // Text-related objects and styles
 let turnAndMovesMsgStyle, turnMessage, movesMessage;
 
@@ -143,28 +140,22 @@ function setup() {
         });
         
         characters.forEach((char) => {
-            //Values dependant on which team the character is on
-            let code;
-            let spacing;
+            //Value dependant on which team the character is on
             let counter;
             
             //Check the character's team
             if(char.playerNumber === 1) {
-                code = 0x0000ff;
-                spacing = 50;
                 counter = player1Counter;
             }
             else {
-                code = 0xff0000;
-                spacing = 225;
                 counter = player2Counter;
             }
             
-            //Create the HP bar
-            let healthBar = new HealthBar(char, gameScene);
-            healthBar.makeHealthBar(counter);
+            // Create the HP bar
+            char.healthBar = new HealthBar(gameScene);
+            char.healthBar.makeHealthBar(char, counter);
      
-            // Set the filename
+            // Set the filename for the character sprite
             let fileName = char.name.toLowerCase();
             
             if (char.playerNumber == 1) {
@@ -252,8 +243,7 @@ function setup() {
     gameOverScene = new Container();
     app.stage.addChild(gameOverScene);
     
-    // Set gameOverScene to false since game isn't over when the game initially
-    // starts
+    // Set gameOverScene to false since game isn't over when the game initially starts
     gameOverScene.visible = false;
     
     // Create the text sprite and add it to the gameOverScene
@@ -292,21 +282,24 @@ function gameOver() {
 }
 
 function play() {
-    
-    if(cursor.spriteMoving) {
-        //If no more tiles to move, stop movement
-        if(!cursor.spritePath[0]) {
-            cursor.spriteMoving = false;
-        }
-        else if(cursor.movedInSprite !== constants.TILESIZE) {
-            cursor.selectedCharacter.sprite.position.x += cursor.spritePath[0].x;
-            cursor.selectedCharacter.sprite.position.y += cursor.spritePath[0].y;
-            cursor.movedInSprite += constants.PIXEL_PER_FRAME;
-        }
-        else{
-            cursor.movedInSprite = 0;
-            cursor.spritePath.splice(0, 1);
-            
+    for(let i = 0; i < characters.length; i++) {
+        
+        if(characters[i].movement.isMoving) {
+            let char = characters[i];
+            //If no more tiles to move, stop movement
+            if(!char.movement.spritePath[0]) {
+                char.movement.isMoving = false;
+            }
+            else if(char.movedInSprite !== constants.TILESIZE) {
+                char.sprite.position.x += cursor.spritePath[0].x;
+                char.sprite.position.y += cursor.spritePath[0].y;
+                char.movement.movedInSprite += constants.PIXEL_PER_FRAME;
+            }
+            else{
+                char.movedInSprite = 0;
+                char.spritePath.splice(0, 1);
+                
+            }
         }
     }
     
@@ -334,20 +327,9 @@ function play() {
         return;
     }
     
-    // Check each character the active player has
-    // If all characters have moved, it is time to switch turns
-    let allCharactersMoved = true;
-    
-    for(let i=0; i < activePlayer.characters.length; i++) {
-        if(activePlayer.characters[i].hasMoved === false) {
-            allCharactersMoved = false;
-            break;
-        }
-    }
-    
-    // All characters for the active player have moved, so switch characters and
-    // reset the characters for the new active player to be able to be moved again
-    if(allCharactersMoved) {
+    // If all characters have moved for the current active player, it is time to switch turns
+    // Reset the characters for the new active player to be able to be moved again
+    if(checkIfAllCharsMoved()) {
         // Prepare for this player's next turn
         activePlayer.characters.forEach((char) => {
             char.hasMoved = false;
@@ -362,7 +344,6 @@ function play() {
             turn++;
             //turnMessage.text = "Player 1's turn!";
         }
-        //alert(`It is ${activePlayer.color} team's turn`)
     }
     
     
@@ -373,6 +354,18 @@ function play() {
 
 function changeMovementText() {
     movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
+}
+
+// Check each character the active player has
+// If all characters have moved for the current player, return true; false otherwise
+function checkIfAllCharsMoved() {
+    for(let i=0; i < activePlayer.characters.length; i++) {
+        if(activePlayer.characters[i].hasMoved === false) {
+            return false;
+        }
+    }
+    
+    return true;
 }
 
 keys.down.press = () => {
@@ -387,7 +380,7 @@ keys.down.press = () => {
     
     if(cursor.isSelected && cursor.distanceLeft > 0) {
         cursor.distanceLeft--;
-        cursor.spritePath.push({x:0, y:constants.PIXEL_PER_FRAME})
+        cursor.selectedCharacter.movement.spritePath.push({x:0, y:constants.PIXEL_PER_FRAME})
         changeMovementText();
     }
 };
@@ -406,7 +399,7 @@ keys.up.press = () => {
     
     if(cursor.isSelected && cursor.distanceLeft > 0) {
         cursor.distanceLeft--;
-        cursor.spritePath.push({x:0, y:-constants.PIXEL_PER_FRAME})
+        cursor.selectedCharacter.movement.spritePath.push({x:0, y:-constants.PIXEL_PER_FRAME})
         changeMovementText();
     }
 };
@@ -415,13 +408,13 @@ keys.left.press = () => {
     if(cursor.position.x > 0 && cursor.currentSprite === cursor.targetSprite) {
         cursor.currentSprite.x  = cursor.targetArray[cursor.targetArrayIndex].position.x;
         cursor.currentSprite.y  = cursor.targetArray[cursor.targetArrayIndex].position.y;
-        cursor.position.x       = cursor.targetArray[cursor.targetArrayIndex].position.x;
-        cursor.position.y       = cursor.targetArray[cursor.targetArrayIndex].position.y;
+        // cursor.position.x       = cursor.targetArray[cursor.targetArrayIndex].position.x;
+        // cursor.position.y       = cursor.targetArray[cursor.targetArrayIndex].position.y;
         
-        if(cursor.targetArrayIndex === cursor.targetArray.length-1) cursor.targetArrayIndex = 0;
+        cursor.selectedCharacter = cursor.targetArray[cursor.targetArrayIndex];
+        
+        if (cursor.targetArrayIndex === cursor.targetArray.length-1) cursor.targetArrayIndex = 0;
         else cursor.targetArrayIndex++;
-        
-        //cursor.selectedCharacter = cursor.targetArray[cursor.targetArrayIndex];
         
         return;
     }
@@ -436,7 +429,7 @@ keys.left.press = () => {
     
     if(cursor.isSelected && cursor.distanceLeft > 0) {
         cursor.distanceLeft--;
-        cursor.spritePath.push({x:-constants.PIXEL_PER_FRAME, y:0})
+        cursor.selectedCharacter.movement.spritePath.push({x:-constants.PIXEL_PER_FRAME, y:0})
         changeMovementText();
     }
 };
@@ -445,13 +438,13 @@ keys.right.press = () => {
     if(cursor.position.x < constants.NUM_TILES-1 && cursor.currentSprite === cursor.targetSprite) {
         cursor.currentSprite.x  = cursor.targetArray[cursor.targetArrayIndex].position.x;
         cursor.currentSprite.y  = cursor.targetArray[cursor.targetArrayIndex].position.y;
-        cursor.position.x       = cursor.targetArray[cursor.targetArrayIndex].position.x;
-        cursor.position.y       = cursor.targetArray[cursor.targetArrayIndex].position.y;
+        // cursor.position.x       = cursor.targetArray[cursor.targetArrayIndex].position.x;
+        // cursor.position.y       = cursor.targetArray[cursor.targetArrayIndex].position.y;
+        
+        cursor.selectedCharacter = cursor.targetArray[cursor.targetArrayIndex];
         
         if(cursor.targetArrayIndex === cursor.targetArray.length-1) cursor.targetArrayIndex = 0;
         else cursor.targetArrayIndex++;
-        
-        //cursor.selectedCharacter = cursor.targetArray[cursor.targetArrayIndex];
         
         return;
     }
@@ -465,7 +458,7 @@ keys.right.press = () => {
     
     if(cursor.isSelected && cursor.distanceLeft > 0) {
         cursor.distanceLeft--;
-        cursor.spritePath.push({x:constants.PIXEL_PER_FRAME, y:0})
+        cursor.selectedCharacter.movement.spritePath.push({x:constants.PIXEL_PER_FRAME, y:0})
         changeMovementText();
     }
 };
@@ -526,19 +519,8 @@ keys.a.press = () => {
             return;
         }
         
-        // TODO: Make this a function since it's duplicated in a bunch of places
-        // Check each character the active player has
-        // If all characters have moved, it is time to switch turns
-        let allCharactersMoved = true;
-        
-        for(let i=0; i < activePlayer.characters.length; i++) {
-            if(activePlayer.characters[i].hasMoved === false) {
-                allCharactersMoved = false;
-                break;
-            }
-        }
-        
-        if(allCharactersMoved) {
+        // If all characters have moved for the current active player, it is time to switch turns
+        if(checkIfAllCharsMoved()) {
             // FIXME: Need to make sure that if character dies, the correct player turn message
             // is printed
             if(currentTile.character === null) {
@@ -673,19 +655,9 @@ function selectEnemyToAttack(currentTile) {
     // if(currentTile.character === null) {
     //     turnMessage.text = "Player 2's turn!"
     // }
-
-    // Check each character the active player has
-    // If all characters have moved, it is time to switch turns
-    let allCharactersMoved = true;
     
-    for(let i=0; i < activePlayer.characters.length; i++) {
-        if(activePlayer.characters[i].hasMoved === false) {
-            allCharactersMoved = false;
-            break;
-        }
-    }
-    
-    if(allCharactersMoved) {
+    // If all characters have moved for the current active player, it is time to switch turns
+    if(checkIfAllCharsMoved()) {
         // FIXME: Need to make sure that if character dies, the correct player turn message
         // is printed
         if(currentTile.character === null) {

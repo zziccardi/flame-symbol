@@ -785,6 +785,10 @@ keys.right.press = () => {
     }
 };
 
+// TODO : Sometimes the game doesn't let you select any character on the board,
+// probably because it thinks a character for a team hasn't moved yet in the turn,
+// when in reality the character is dead/just died
+
 keys.a.press = () => {
     // Trying to fix error below...
     if (cursor.position.x > 14 || cursor.position.y > 14) {

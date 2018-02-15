@@ -3,9 +3,6 @@ import Weapon from "../classes/Weapon.js";
 
 import charactersJSON from "../data/characters.json";
 
-import constants from "../constants.js";
-
-
 export default class Character {
     
     /**
@@ -21,14 +18,19 @@ export default class Character {
         this.stats            = data.stats;
         this.weapon           = new Weapon(data.weapon, this.weaponType);
         this.playerNumber     = team;
+        
+        //bool determining if a character has moved within the current turn
+        //A character should not be allowed to move if it has already moved in that turn
         this.hasMoved         = false;
+        
+        //X and Y coordinates representing the tile the character currently occupies
         this.position = {
             x: null,
             y: null
         };
-        this.movement = 0;
-        this.sprite   = null;
         
+        //The amount of tiles a character can move in a turn, based on their class
+        this.movement = 0;
         if(this.movementType === "infantry") {
             this.movement = 5;
         }
@@ -41,6 +43,9 @@ export default class Character {
         else if(this.movementType === "flier") {
             this.movement = 6;
         }
+        
+        //The sprite the character uses
+        this.sprite   = null;
 
         // Healthbar and Health related items
         this.healthBar = null;
@@ -48,18 +53,24 @@ export default class Character {
         this.hpIsScrolling = false;
         this.scrollingHP = this.currentHP;
         
-        //Movement information
-        this.movement = {
+        //Sprite Movement information
+        this.movingSpriteInfo = {
+            
+            //Bool determining if a sprite is currently in motion
             isMoving : false,
+            
+            //The path the sprite will take
             spritePath : [],
-            movedInSprite : 0
+            
+            //The number of pixels a sprite has moved within a tile
+            movedInTile : 0
         };
     }
     
     /**
      * Move the character to a new tile
      * @param {Cursor} cursor - the cursor instance (indicates the destination)
-     * @return this - a reference to this character, to be added to the destination tile
+     * @return {Character} this - a reference to this character, to be added to the destination tile
      */
     move(cursor) {
         // Move the character based on where the cursor currently is
@@ -68,10 +79,11 @@ export default class Character {
         //    cursor.position.y * constants.TILESIZE
         //);
         
-        this.hasMoved = true;
-        cursor.spriteMoving = true;
+        this.movingSpriteInfo.isMoving = true;
+        
         this.position.x = cursor.position.x;
         this.position.y = cursor.position.y;
+        this.hasMoved = true;
         
         // Update the destination tile to include the character that just moved there
         return this;
@@ -194,5 +206,29 @@ export default class Character {
         }
         
         return 1;
+    }
+    
+    /**
+     * 
+     * @param {object} PIXI - Pixi object
+     */
+    desaturateSprite(PIXI) {
+        let colorMatrix = new PIXI.filters.ColorMatrixFilter();
+        
+        this.sprite.filters = [colorMatrix];
+        
+        colorMatrix.desaturate();
+    }
+    
+    /**
+     * 
+     * @param {object} PIXI - Pixi object
+     */
+    saturateSprite(PIXI) {
+        let colorMatrix = new PIXI.filters.ColorMatrixFilter();
+        
+        this.sprite.filters = [colorMatrix];
+        
+        colorMatrix.reset();
     }
 }

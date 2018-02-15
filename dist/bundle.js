@@ -71,13 +71,25 @@
 
 // Currently, the game is a 15x15 board, each tile is 48x48 pixels, and the board is 720x720 pixels
 const constants = {
-    BOARDSIZE: 576,
-    TILESIZE: 48,
-    SCALE: 1.5,
+    
+    //Amount to upscale character sprites and tiles by
+    SCALE: 1,
+    
+    //Number of tiles per row and column
     NUM_TILES: 12,
+    
+    //Number of pixels a moving sprite progresses per frame
     PIXEL_PER_FRAME: 8,
+    
+    //Number of pixels that makes up one segment of HP
     PIXEL_PER_HP: 3
 };
+
+//Number of pixels that make up the length or width of a tile
+constants.TILESIZE = constants.SCALE * 32;
+
+//Number of pixels that make up a row or column of the game board
+constants.BOARDSIZE = constants.TILESIZE * constants.NUM_TILES;
 
 /* harmony default export */ __webpack_exports__["a"] = (constants);
 
@@ -130,7 +142,7 @@ const Text         = PIXI.Text;
 let app = null;
 let gameScene, gameOverScene, state;
 
-// FIXME: Never used
+//Current turn, the turn progresses by one every time all player's have made their moves
 let turn = 1;
 
 // Text-related objects and styles
@@ -139,7 +151,7 @@ let turnAndMovesMsgStyle, turnMessage, movesMessage;
 // The cursor (the colored sprite that shows the user where they are selecting)
 let cursor = new __WEBPACK_IMPORTED_MODULE_3__classes_Cursor_js__["a" /* default */]();
 
-// List of characters, list appended to by reading JSON file
+// List of all characters across all players, list appended to by reading JSON file
 let characters = [];
 
 // Create the players, may allow choosing team and yellow and green options later
@@ -149,8 +161,13 @@ let player2 = new __WEBPACK_IMPORTED_MODULE_2__classes_Player_js__["a" /* defaul
 // Player whose turn it is
 let activePlayer = player1;
 
+//2-D array of tiles
 let tiles = [];
 
+//List of pressable keys
+//Diretional Keys used for moving the cursor
+//A used for selecting a character/tile
+//S for deselecting a character
 let keys = {
     left:  Object(__WEBPACK_IMPORTED_MODULE_5__utilities_createKey_js__["a" /* default */])(37),
     up:    Object(__WEBPACK_IMPORTED_MODULE_5__utilities_createKey_js__["a" /* default */])(38),
@@ -166,7 +183,7 @@ function main() {
     // Create the canvas
     app = new Application({
         width: __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].BOARDSIZE + 400,
-        height: __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].BOARDSIZE + 200,
+        height: __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].BOARDSIZE,
     });
     
     
@@ -315,12 +332,12 @@ function setup() {
     
     turnMessage = new Text("Player 1's turn!", turnAndMovesMsgStyle);
     turnMessage.x = __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].BOARDSIZE + 125;
-    turnMessage.y = __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].BOARDSIZE - 225;
+    turnMessage.y = __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].BOARDSIZE - 175;
     gameScene.addChild(turnMessage);
     
     movesMessage = new Text("Moves remaining:", turnAndMovesMsgStyle);
     movesMessage.x = __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].BOARDSIZE + 110;
-    movesMessage.y = __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].BOARDSIZE - 175;
+    movesMessage.y = __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].BOARDSIZE - 125;
     gameScene.addChild(movesMessage);
     
     // Create the cursor sprite
@@ -390,20 +407,30 @@ function gameOver() {
 }
 
 function play() {
-    if(cursor.spriteMoving) {
-        //If no more tiles to move, stop movement
-        if(!cursor.spritePath[0]) {
-            cursor.spriteMoving = false;
-        }
-        else if(cursor.movedInSprite !== __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].TILESIZE) {
-            cursor.selectedCharacter.sprite.position.x += cursor.spritePath[0].x;
-            cursor.selectedCharacter.sprite.position.y += cursor.spritePath[0].y;
-            cursor.movedInSprite += __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME;
-        }
-        else{
-            cursor.movedInSprite = 0;
-            cursor.spritePath.splice(0, 1);
+    
+    //Check each character to see if they are currently moving
+    for(let i = 0; i < characters.length; i++) {
+        if(characters[i].movingSpriteInfo.isMoving) {
+            let char = characters[i];
             
+            //If no more tiles to move, stop movement
+            if(!char.movingSpriteInfo.spritePath[0]) {
+                char.movingSpriteInfo.isMoving = false;
+            }
+            //Move the sprite
+            else if(char.movingSpriteInfo.movedInTile !== __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].TILESIZE) {
+                //Increment the x or y position
+                char.sprite.position.x += char.movingSpriteInfo.spritePath[0].x;
+                char.sprite.position.y += char.movingSpriteInfo.spritePath[0].y;
+                //Keep track of how far in the tile the sprite has moved
+                char.movingSpriteInfo.movedInTile += __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME;
+            }
+            //Character is done moving within it's current sprite, remove the first element
+            else{
+                char.movingSpriteInfo.movedInTile = 0;
+                char.movingSpriteInfo.spritePath.splice(0, 1);
+                
+            }
         }
     }
     
@@ -437,6 +464,7 @@ function play() {
         // Prepare for this player's next turn
         activePlayer.characters.forEach((char) => {
             char.hasMoved = false;
+            char.saturateSprite(PIXI);
         });
 
         if (activePlayer === player1) {
@@ -483,13 +511,22 @@ keys.down.press = () => {
     }
     
     if(cursor.isSelected && cursor.distanceLeft > 0) {
-        cursor.distanceLeft--;
-        cursor.spritePath.push({x:0, y:__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME})
+        let pathArray = cursor.selectedCharacter.movingSpriteInfo.spritePath;
+        if(pathArray[0] && pathArray[pathArray.length-1].x === 0 && pathArray[pathArray.length-1].y === -__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME) {
+            cursor.distanceLeft++;
+            cursor.selectedCharacter.movingSpriteInfo.spritePath.pop();
+        }
+        else {
+            cursor.distanceLeft--;
+            cursor.selectedCharacter.movingSpriteInfo.spritePath.push({x:0, y:__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME})
+        }
         changeMovementText();
+        
     }
 };
 
 keys.up.press = () => {
+    //Cursor is targetting enemies
     if(cursor.currentSprite === cursor.targetSprite) {
         return;
     }
@@ -502,20 +539,34 @@ keys.up.press = () => {
     }
     
     if(cursor.isSelected && cursor.distanceLeft > 0) {
-        cursor.distanceLeft--;
-        cursor.spritePath.push({x:0, y:-__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME})
+        let pathArray = cursor.selectedCharacter.movingSpriteInfo.spritePath;
+        
+        //If last element of the pathArra
+        if(pathArray[0] && pathArray[pathArray.length-1].x === 0 && pathArray[pathArray.length-1].y === __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME) {
+            cursor.distanceLeft++;
+            cursor.selectedCharacter.movingSpriteInfo.spritePath.pop();
+        }
+        else {
+            cursor.distanceLeft--;
+            cursor.selectedCharacter.movingSpriteInfo.spritePath.push({x:0, y:-__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME})
+        }
         changeMovementText();
     }
 };
 
+//FIXME: Currently switching between multiple targets to attack is broken, need to fix
+
 keys.left.press = () => {
     if(cursor.position.x > 0 && cursor.currentSprite === cursor.targetSprite) {
-        cursor.currentSprite.x  = cursor.targetArray[cursor.targetArrayIndex].position.x;
-        cursor.currentSprite.y  = cursor.targetArray[cursor.targetArrayIndex].position.y;
-        // cursor.position.x       = cursor.targetArray[cursor.targetArrayIndex].position.x;
-        // cursor.position.y       = cursor.targetArray[cursor.targetArrayIndex].position.y;
+        cursor.currentSprite.x  = cursor.targetArray[cursor.targetArrayIndex].sprite.position.x;
+        cursor.currentSprite.y  = cursor.targetArray[cursor.targetArrayIndex].sprite.position.y;
+        cursor.position.x       = cursor.targetArray[cursor.targetArrayIndex].position.x;
+        cursor.position.y       = cursor.targetArray[cursor.targetArrayIndex].position.y;
         
         cursor.selectedCharacter = cursor.targetArray[cursor.targetArrayIndex];
+        
+        console.log(cursor.selectedCharacter);
+        console.log(cursor.position);
         
         if (cursor.targetArrayIndex === cursor.targetArray.length-1) cursor.targetArrayIndex = 0;
         else cursor.targetArrayIndex++;
@@ -530,22 +581,32 @@ keys.left.press = () => {
         //movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
     }
     
-    
     if(cursor.isSelected && cursor.distanceLeft > 0) {
-        cursor.distanceLeft--;
-        cursor.spritePath.push({x:-__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME, y:0})
+        let pathArray = cursor.selectedCharacter.movingSpriteInfo.spritePath;
+        if(pathArray[0] && pathArray[pathArray.length-1].x === __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME && pathArray[pathArray.length-1].y === 0) {
+            cursor.distanceLeft++;
+            cursor.selectedCharacter.movingSpriteInfo.spritePath.pop();
+        }
+        else {
+            cursor.distanceLeft--;
+            cursor.selectedCharacter.movingSpriteInfo.spritePath.push({x:-__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME, y:0})
+        }
         changeMovementText();
+        
     }
 };
 
 keys.right.press = () => {
     if(cursor.position.x < __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].NUM_TILES-1 && cursor.currentSprite === cursor.targetSprite) {
-        cursor.currentSprite.x  = cursor.targetArray[cursor.targetArrayIndex].position.x;
-        cursor.currentSprite.y  = cursor.targetArray[cursor.targetArrayIndex].position.y;
-        // cursor.position.x       = cursor.targetArray[cursor.targetArrayIndex].position.x;
-        // cursor.position.y       = cursor.targetArray[cursor.targetArrayIndex].position.y;
+        cursor.currentSprite.x  = cursor.targetArray[cursor.targetArrayIndex].sprite.position.x;
+        cursor.currentSprite.y  = cursor.targetArray[cursor.targetArrayIndex].sprite.position.y;
+        cursor.position.x       = cursor.targetArray[cursor.targetArrayIndex].position.x;
+        cursor.position.y       = cursor.targetArray[cursor.targetArrayIndex].position.y;
         
         cursor.selectedCharacter = cursor.targetArray[cursor.targetArrayIndex];
+        
+        console.log(cursor.selectedCharacter);
+        console.log(cursor.position);
         
         if(cursor.targetArrayIndex === cursor.targetArray.length-1) cursor.targetArrayIndex = 0;
         else cursor.targetArrayIndex++;
@@ -561,9 +622,17 @@ keys.right.press = () => {
     }
     
     if(cursor.isSelected && cursor.distanceLeft > 0) {
-        cursor.distanceLeft--;
-        cursor.spritePath.push({x:__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME, y:0})
+        let pathArray = cursor.selectedCharacter.movingSpriteInfo.spritePath;
+        if(pathArray[0] && pathArray[pathArray.length-1].x === -__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME && pathArray[pathArray.length-1].y === 0) {
+            cursor.distanceLeft++;
+            cursor.selectedCharacter.movingSpriteInfo.spritePath.pop();
+        }
+        else {
+            cursor.distanceLeft--;
+            cursor.selectedCharacter.movingSpriteInfo.spritePath.push({x:__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME, y:0})
+        }
         changeMovementText();
+        
     }
 };
 
@@ -599,6 +668,7 @@ keys.a.press = () => {
             // Cursor is no longer selecting something
             cursor.toggleSprites();
             currentTile.character.hasMoved = true;
+            currentTile.character.desaturateSprite(PIXI);
             movesMessage.text = "Moves remaining:";
         }
         
@@ -607,6 +677,8 @@ keys.a.press = () => {
         // on this tile after moving it
         if (!currentTile.character) {
             currentTile.character = cursor.selectedCharacter.move(cursor);
+            
+            currentTile.character.desaturateSprite(PIXI);
             
             // Set the old tile where the character originally came from to empty
             tiles[cursor.startingTile.x][cursor.startingTile.y].character = null;
@@ -655,7 +727,7 @@ keys.a.press = () => {
 
 keys.s.press = () => {
     // Reset the sprite path if the player changed their mind
-    cursor.spritePath = [];
+    cursor.selectedCharacter.movingSpriteInfo.spritePath = [];
     
     if (cursor.isSelected) {
         cursor.toggleSprites();
@@ -783,7 +855,7 @@ function checkIfCanAttack() {
     let adjacentEnemies = [];
     
     cursor.targetArray = [];
-    cursor.targetArrayIndex = 0;
+    cursor.targetArrayIndex = 1;
     
     // First check if character exists in above tile (but not if we're in the top row)
     // If character exists, make sure it is an enemy character
@@ -793,7 +865,7 @@ function checkIfCanAttack() {
         if (characterInTileAbove &&
             (characterInTileAbove.playerNumber !== activePlayer.playerNumber)) {
             adjacentEnemies.push(characterInTileAbove);
-            cursor.targetArray.push(characterInTileAbove.sprite);
+            cursor.targetArray.push(characterInTileAbove);
         }
     }
     
@@ -803,7 +875,7 @@ function checkIfCanAttack() {
         if (characterInTileBelow &&
             (characterInTileBelow.playerNumber !== activePlayer.playerNumber)) {
             adjacentEnemies.push(characterInTileBelow);
-            cursor.targetArray.push(characterInTileBelow.sprite);
+            cursor.targetArray.push(characterInTileBelow);
         }
     }
     
@@ -813,7 +885,7 @@ function checkIfCanAttack() {
         if (characterInTileRight &&
             (characterInTileRight.playerNumber !== activePlayer.playerNumber)) {
             adjacentEnemies.push(characterInTileRight);
-            cursor.targetArray.push(characterInTileRight.sprite);
+            cursor.targetArray.push(characterInTileRight);
         }  
     }
     
@@ -823,7 +895,7 @@ function checkIfCanAttack() {
         if (characterInTileLeft &&
             (characterInTileLeft.playerNumber !== activePlayer.playerNumber)) {
             adjacentEnemies.push(characterInTileLeft);
-            cursor.targetArray.push(characterInTileLeft.sprite);
+            cursor.targetArray.push(characterInTileLeft);
         }
     }
     
@@ -852,10 +924,6 @@ function checkIfCanAttack() {
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__classes_Weapon_js__ = __webpack_require__(4);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__data_characters_json__ = __webpack_require__(1);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__data_characters_json___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__data_characters_json__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__constants_js__ = __webpack_require__(0);
-
-
-
 
 
 
@@ -876,14 +944,19 @@ class Character {
         this.stats            = data.stats;
         this.weapon           = new __WEBPACK_IMPORTED_MODULE_0__classes_Weapon_js__["a" /* default */](data.weapon, this.weaponType);
         this.playerNumber     = team;
+        
+        //bool determining if a character has moved within the current turn
+        //A character should not be allowed to move if it has already moved in that turn
         this.hasMoved         = false;
+        
+        //X and Y coordinates representing the tile the character currently occupies
         this.position = {
             x: null,
             y: null
         };
-        this.movement = 0;
-        this.sprite   = null;
         
+        //The amount of tiles a character can move in a turn, based on their class
+        this.movement = 0;
         if(this.movementType === "infantry") {
             this.movement = 5;
         }
@@ -896,18 +969,34 @@ class Character {
         else if(this.movementType === "flier") {
             this.movement = 6;
         }
+        
+        //The sprite the character uses
+        this.sprite   = null;
 
         // Healthbar and Health related items
         this.healthBar = null;
         this.currentHP = this.stats.hp;
         this.hpIsScrolling = false;
         this.scrollingHP = this.currentHP;
+        
+        //Sprite Movement information
+        this.movingSpriteInfo = {
+            
+            //Bool determining if a sprite is currently in motion
+            isMoving : false,
+            
+            //The path the sprite will take
+            spritePath : [],
+            
+            //The number of pixels a sprite has moved within a tile
+            movedInTile : 0
+        };
     }
     
     /**
      * Move the character to a new tile
      * @param {Cursor} cursor - the cursor instance (indicates the destination)
-     * @return this - a reference to this character, to be added to the destination tile
+     * @return {Character} this - a reference to this character, to be added to the destination tile
      */
     move(cursor) {
         // Move the character based on where the cursor currently is
@@ -916,10 +1005,11 @@ class Character {
         //    cursor.position.y * constants.TILESIZE
         //);
         
-        this.hasMoved = true;
-        cursor.spriteMoving = true;
+        this.movingSpriteInfo.isMoving = true;
+        
         this.position.x = cursor.position.x;
         this.position.y = cursor.position.y;
+        this.hasMoved = true;
         
         // Update the destination tile to include the character that just moved there
         return this;
@@ -1042,6 +1132,30 @@ class Character {
         }
         
         return 1;
+    }
+    
+    /**
+     * 
+     * @param {object} PIXI - Pixi object
+     */
+    desaturateSprite(PIXI) {
+        let colorMatrix = new PIXI.filters.ColorMatrixFilter();
+        
+        this.sprite.filters = [colorMatrix];
+        
+        colorMatrix.desaturate();
+    }
+    
+    /**
+     * 
+     * @param {object} PIXI - Pixi object
+     */
+    saturateSprite(PIXI) {
+        let colorMatrix = new PIXI.filters.ColorMatrixFilter();
+        
+        this.sprite.filters = [colorMatrix];
+        
+        colorMatrix.reset();
     }
 }
 /* harmony export (immutable) */ __webpack_exports__["a"] = Character;

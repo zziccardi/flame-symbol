@@ -25,13 +25,16 @@ const Text         = PIXI.Text;
 let app = null;
 let gameScene, gameOverScene, state;
 
+//Current turn, the turn progresses by one every time all player's have made their moves
+let turn = 1;
+
 // Text-related objects and styles
 let turnAndMovesMsgStyle, turnMessage, movesMessage;
 
 // The cursor (the colored sprite that shows the user where they are selecting)
 let cursor = new Cursor();
 
-// List of characters, list appended to by reading JSON file
+// List of all characters across all players, list appended to by reading JSON file
 let characters = [];
 
 // Create the players, may allow choosing team and yellow and green options later
@@ -41,8 +44,13 @@ let player2 = new Player([], "red", 2);
 // Player whose turn it is
 let activePlayer = player1;
 
+//2-D array of tiles
 let tiles = [];
 
+//List of pressable keys
+//Diretional Keys used for moving the cursor
+//A used for selecting a character/tile
+//S for deselecting a character
 let keys = {
     left:  createKey(37),
     up:    createKey(38),
@@ -58,7 +66,7 @@ function main() {
     // Create the canvas
     app = new Application({
         width: constants.BOARDSIZE + 400,
-        height: constants.BOARDSIZE + 200,
+        height: constants.BOARDSIZE,
     });
     
     
@@ -207,12 +215,12 @@ function setup() {
     
     turnMessage = new Text("Player 1's turn!", turnAndMovesMsgStyle);
     turnMessage.x = constants.BOARDSIZE + 125;
-    turnMessage.y = constants.BOARDSIZE - 225;
+    turnMessage.y = constants.BOARDSIZE - 175;
     gameScene.addChild(turnMessage);
     
     movesMessage = new Text("Moves remaining:", turnAndMovesMsgStyle);
     movesMessage.x = constants.BOARDSIZE + 110;
-    movesMessage.y = constants.BOARDSIZE - 175;
+    movesMessage.y = constants.BOARDSIZE - 125;
     gameScene.addChild(movesMessage);
     
     // Create the cursor sprite
@@ -282,22 +290,28 @@ function gameOver() {
 }
 
 function play() {
+    
+    //Check each character to see if they are currently moving
     for(let i = 0; i < characters.length; i++) {
-        
-        if(characters[i].movement.isMoving) {
+        if(characters[i].movingSpriteInfo.isMoving) {
             let char = characters[i];
+            
             //If no more tiles to move, stop movement
-            if(!char.movement.spritePath[0]) {
-                char.movement.isMoving = false;
+            if(!char.movingSpriteInfo.spritePath[0]) {
+                char.movingSpriteInfo.isMoving = false;
             }
-            else if(char.movedInSprite !== constants.TILESIZE) {
-                char.sprite.position.x += cursor.spritePath[0].x;
-                char.sprite.position.y += cursor.spritePath[0].y;
-                char.movement.movedInSprite += constants.PIXEL_PER_FRAME;
+            //Move the sprite
+            else if(char.movingSpriteInfo.movedInTile !== constants.TILESIZE) {
+                //Increment the x or y position
+                char.sprite.position.x += char.movingSpriteInfo.spritePath[0].x;
+                char.sprite.position.y += char.movingSpriteInfo.spritePath[0].y;
+                //Keep track of how far in the tile the sprite has moved
+                char.movingSpriteInfo.movedInTile += constants.PIXEL_PER_FRAME;
             }
+            //Character is done moving within it's current sprite, remove the first element
             else{
-                char.movedInSprite = 0;
-                char.spritePath.splice(0, 1);
+                char.movingSpriteInfo.movedInTile = 0;
+                char.movingSpriteInfo.spritePath.splice(0, 1);
                 
             }
         }
@@ -333,6 +347,7 @@ function play() {
         // Prepare for this player's next turn
         activePlayer.characters.forEach((char) => {
             char.hasMoved = false;
+            char.saturateSprite(PIXI);
         });
 
         if (activePlayer === player1) {
@@ -379,13 +394,22 @@ keys.down.press = () => {
     }
     
     if(cursor.isSelected && cursor.distanceLeft > 0) {
-        cursor.distanceLeft--;
-        cursor.selectedCharacter.movement.spritePath.push({x:0, y:constants.PIXEL_PER_FRAME})
+        let pathArray = cursor.selectedCharacter.movingSpriteInfo.spritePath;
+        if(pathArray[0] && pathArray[pathArray.length-1].x === 0 && pathArray[pathArray.length-1].y === -constants.PIXEL_PER_FRAME) {
+            cursor.distanceLeft++;
+            cursor.selectedCharacter.movingSpriteInfo.spritePath.pop();
+        }
+        else {
+            cursor.distanceLeft--;
+            cursor.selectedCharacter.movingSpriteInfo.spritePath.push({x:0, y:constants.PIXEL_PER_FRAME})
+        }
         changeMovementText();
+        
     }
 };
 
 keys.up.press = () => {
+    //Cursor is targetting enemies
     if(cursor.currentSprite === cursor.targetSprite) {
         return;
     }
@@ -398,20 +422,34 @@ keys.up.press = () => {
     }
     
     if(cursor.isSelected && cursor.distanceLeft > 0) {
-        cursor.distanceLeft--;
-        cursor.selectedCharacter.movement.spritePath.push({x:0, y:-constants.PIXEL_PER_FRAME})
+        let pathArray = cursor.selectedCharacter.movingSpriteInfo.spritePath;
+        
+        //If last element of the pathArra
+        if(pathArray[0] && pathArray[pathArray.length-1].x === 0 && pathArray[pathArray.length-1].y === constants.PIXEL_PER_FRAME) {
+            cursor.distanceLeft++;
+            cursor.selectedCharacter.movingSpriteInfo.spritePath.pop();
+        }
+        else {
+            cursor.distanceLeft--;
+            cursor.selectedCharacter.movingSpriteInfo.spritePath.push({x:0, y:-constants.PIXEL_PER_FRAME})
+        }
         changeMovementText();
     }
 };
 
+//FIXME: Currently switching between multiple targets to attack is broken, need to fix
+
 keys.left.press = () => {
     if(cursor.position.x > 0 && cursor.currentSprite === cursor.targetSprite) {
-        cursor.currentSprite.x  = cursor.targetArray[cursor.targetArrayIndex].position.x;
-        cursor.currentSprite.y  = cursor.targetArray[cursor.targetArrayIndex].position.y;
-        // cursor.position.x       = cursor.targetArray[cursor.targetArrayIndex].position.x;
-        // cursor.position.y       = cursor.targetArray[cursor.targetArrayIndex].position.y;
+        cursor.currentSprite.x  = cursor.targetArray[cursor.targetArrayIndex].sprite.position.x;
+        cursor.currentSprite.y  = cursor.targetArray[cursor.targetArrayIndex].sprite.position.y;
+        cursor.position.x       = cursor.targetArray[cursor.targetArrayIndex].position.x;
+        cursor.position.y       = cursor.targetArray[cursor.targetArrayIndex].position.y;
         
         cursor.selectedCharacter = cursor.targetArray[cursor.targetArrayIndex];
+        
+        console.log(cursor.selectedCharacter);
+        console.log(cursor.position);
         
         if (cursor.targetArrayIndex === cursor.targetArray.length-1) cursor.targetArrayIndex = 0;
         else cursor.targetArrayIndex++;
@@ -426,22 +464,32 @@ keys.left.press = () => {
         //movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
     }
     
-    
     if(cursor.isSelected && cursor.distanceLeft > 0) {
-        cursor.distanceLeft--;
-        cursor.selectedCharacter.movement.spritePath.push({x:-constants.PIXEL_PER_FRAME, y:0})
+        let pathArray = cursor.selectedCharacter.movingSpriteInfo.spritePath;
+        if(pathArray[0] && pathArray[pathArray.length-1].x === constants.PIXEL_PER_FRAME && pathArray[pathArray.length-1].y === 0) {
+            cursor.distanceLeft++;
+            cursor.selectedCharacter.movingSpriteInfo.spritePath.pop();
+        }
+        else {
+            cursor.distanceLeft--;
+            cursor.selectedCharacter.movingSpriteInfo.spritePath.push({x:-constants.PIXEL_PER_FRAME, y:0})
+        }
         changeMovementText();
+        
     }
 };
 
 keys.right.press = () => {
     if(cursor.position.x < constants.NUM_TILES-1 && cursor.currentSprite === cursor.targetSprite) {
-        cursor.currentSprite.x  = cursor.targetArray[cursor.targetArrayIndex].position.x;
-        cursor.currentSprite.y  = cursor.targetArray[cursor.targetArrayIndex].position.y;
-        // cursor.position.x       = cursor.targetArray[cursor.targetArrayIndex].position.x;
-        // cursor.position.y       = cursor.targetArray[cursor.targetArrayIndex].position.y;
+        cursor.currentSprite.x  = cursor.targetArray[cursor.targetArrayIndex].sprite.position.x;
+        cursor.currentSprite.y  = cursor.targetArray[cursor.targetArrayIndex].sprite.position.y;
+        cursor.position.x       = cursor.targetArray[cursor.targetArrayIndex].position.x;
+        cursor.position.y       = cursor.targetArray[cursor.targetArrayIndex].position.y;
         
         cursor.selectedCharacter = cursor.targetArray[cursor.targetArrayIndex];
+        
+        console.log(cursor.selectedCharacter);
+        console.log(cursor.position);
         
         if(cursor.targetArrayIndex === cursor.targetArray.length-1) cursor.targetArrayIndex = 0;
         else cursor.targetArrayIndex++;
@@ -457,9 +505,17 @@ keys.right.press = () => {
     }
     
     if(cursor.isSelected && cursor.distanceLeft > 0) {
-        cursor.distanceLeft--;
-        cursor.selectedCharacter.movement.spritePath.push({x:constants.PIXEL_PER_FRAME, y:0})
+        let pathArray = cursor.selectedCharacter.movingSpriteInfo.spritePath;
+        if(pathArray[0] && pathArray[pathArray.length-1].x === -constants.PIXEL_PER_FRAME && pathArray[pathArray.length-1].y === 0) {
+            cursor.distanceLeft++;
+            cursor.selectedCharacter.movingSpriteInfo.spritePath.pop();
+        }
+        else {
+            cursor.distanceLeft--;
+            cursor.selectedCharacter.movingSpriteInfo.spritePath.push({x:constants.PIXEL_PER_FRAME, y:0})
+        }
         changeMovementText();
+        
     }
 };
 
@@ -495,6 +551,7 @@ keys.a.press = () => {
             // Cursor is no longer selecting something
             cursor.toggleSprites();
             currentTile.character.hasMoved = true;
+            currentTile.character.desaturateSprite(PIXI);
             movesMessage.text = "Moves remaining:";
         }
         
@@ -503,6 +560,8 @@ keys.a.press = () => {
         // on this tile after moving it
         if (!currentTile.character) {
             currentTile.character = cursor.selectedCharacter.move(cursor);
+            
+            currentTile.character.desaturateSprite(PIXI);
             
             // Set the old tile where the character originally came from to empty
             tiles[cursor.startingTile.x][cursor.startingTile.y].character = null;
@@ -551,7 +610,7 @@ keys.a.press = () => {
 
 keys.s.press = () => {
     // Reset the sprite path if the player changed their mind
-    cursor.spritePath = [];
+    cursor.selectedCharacter.movingSpriteInfo.spritePath = [];
     
     if (cursor.isSelected) {
         cursor.toggleSprites();
@@ -679,7 +738,7 @@ function checkIfCanAttack() {
     let adjacentEnemies = [];
     
     cursor.targetArray = [];
-    cursor.targetArrayIndex = 0;
+    cursor.targetArrayIndex = 1;
     
     // First check if character exists in above tile (but not if we're in the top row)
     // If character exists, make sure it is an enemy character
@@ -689,7 +748,7 @@ function checkIfCanAttack() {
         if (characterInTileAbove &&
             (characterInTileAbove.playerNumber !== activePlayer.playerNumber)) {
             adjacentEnemies.push(characterInTileAbove);
-            cursor.targetArray.push(characterInTileAbove.sprite);
+            cursor.targetArray.push(characterInTileAbove);
         }
     }
     
@@ -699,7 +758,7 @@ function checkIfCanAttack() {
         if (characterInTileBelow &&
             (characterInTileBelow.playerNumber !== activePlayer.playerNumber)) {
             adjacentEnemies.push(characterInTileBelow);
-            cursor.targetArray.push(characterInTileBelow.sprite);
+            cursor.targetArray.push(characterInTileBelow);
         }
     }
     
@@ -709,7 +768,7 @@ function checkIfCanAttack() {
         if (characterInTileRight &&
             (characterInTileRight.playerNumber !== activePlayer.playerNumber)) {
             adjacentEnemies.push(characterInTileRight);
-            cursor.targetArray.push(characterInTileRight.sprite);
+            cursor.targetArray.push(characterInTileRight);
         }  
     }
     
@@ -719,7 +778,7 @@ function checkIfCanAttack() {
         if (characterInTileLeft &&
             (characterInTileLeft.playerNumber !== activePlayer.playerNumber)) {
             adjacentEnemies.push(characterInTileLeft);
-            cursor.targetArray.push(characterInTileLeft.sprite);
+            cursor.targetArray.push(characterInTileLeft);
         }
     }
     

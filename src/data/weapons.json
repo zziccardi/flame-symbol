@@ -20,5 +20,11 @@
       "name": "Steel Axe",
       "might": 8
     }
+  ],
+  "bow": [
+    {
+      "name": "Fujin Yumi",
+      "might": 14
+    }
   ]
 }

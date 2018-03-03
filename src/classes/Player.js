@@ -5,8 +5,15 @@ export default class Player {
     
     constructor(characters, color, playerNumber) {
         this.playerNumber = playerNumber;
+        
+        //Array of characters the player possesses 
         this.characters = characters;
+        
+        //The player's color
         this.color = color;
+        
+        //The character currently selected by the player
+        this.selectedCharacter = null;
         
         //Starting positions for Player 1's characters
         this.characterCoordinates1 = [

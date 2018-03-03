@@ -108,7 +108,7 @@
 	"sourceSize": {"w":32,"h":32},
 	"pivot": {"x":0.5,"y":0.5}
 },
-"trail.png":
+"takumi-blue.png":
 {
 	"frame": {"x":384,"y":0,"w":32,"h":32},
 	"rotated": false,
@@ -116,14 +116,32 @@
 	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":32},
 	"sourceSize": {"w":32,"h":32},
 	"pivot": {"x":0.5,"y":0.5}
+},
+"takumi-red.png":
+{
+	"frame": {"x":416,"y":0,"w":32,"h":32},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":32},
+	"sourceSize": {"w":32,"h":32},
+	"pivot": {"x":0.5,"y":0.5}
+},
+"trail.png":
+{
+	"frame": {"x":448,"y":0,"w":32,"h":32},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":32},
+	"sourceSize": {"w":32,"h":32},
+	"pivot": {"x":0.5,"y":0.5}
 }},
 "meta": {
-	"app": "http://www.codeandweb.com/texturepacker",
+	"app": "https://www.codeandweb.com/texturepacker",
 	"version": "1.0",
 	"image": "spritesheet.png",
 	"format": "RGBA8888",
-	"size": {"w":416,"h":32},
+	"size": {"w":480,"h":32},
 	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:e5cfaa8cd447152f08056ec5ab824f98:3585833ed2cea22c7322344052e06f4f:729adc6043343cfda41c447ce8f464d6$"
+	"smartupdate": "$TexturePacker:SmartUpdate:6b788483c05f7c034c3b60ea370eaca3:cdecdea870046004a8316d6349a316d1:729adc6043343cfda41c447ce8f464d6$"
 }
 }

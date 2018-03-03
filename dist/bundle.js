@@ -98,7 +98,7 @@ constants.BOARDSIZE = constants.TILESIZE * constants.NUM_TILES;
 /* 1 */
 /***/ (function(module, exports) {
 
-module.exports = {"Lyn":{"weapon-type":"sword","movement-type":"infantry","stats":{"hp":37,"attack":28,"speed":37,"defense":26,"resistance":29},"weapon":"Sol Katti"},"Marth":{"weapon-type":"sword","movement-type":"infantry","stats":{"hp":41,"attack":31,"speed":34,"defense":29,"resistance":23},"weapon":"Falchion"},"Frederick":{"weapon-type":"axe","movement-type":"cavalry","stats":{"hp":43,"attack":35,"speed":25,"defense":36,"resistance":14},"weapon":"Steel Axe"},"Hinoka":{"weapon-type":"lance","movement-type":"flier","stats":{"hp":41,"attack":35,"speed":32,"defense":25,"resistance":24},"weapon":"Hinoka's Spear"}}
+module.exports = {"Lyn":{"weapon-type":"sword","movement-type":"infantry","stats":{"hp":37,"attack":28,"speed":37,"defense":26,"resistance":29},"weapon":"Sol Katti"},"Marth":{"weapon-type":"sword","movement-type":"infantry","stats":{"hp":41,"attack":31,"speed":34,"defense":29,"resistance":23},"weapon":"Falchion"},"Frederick":{"weapon-type":"axe","movement-type":"cavalry","stats":{"hp":43,"attack":35,"speed":25,"defense":36,"resistance":14},"weapon":"Steel Axe"},"Hinoka":{"weapon-type":"lance","movement-type":"flier","stats":{"hp":41,"attack":35,"speed":32,"defense":25,"resistance":24},"weapon":"Hinoka's Spear"},"Takumi":{"weapon-type":"bow","movement-type":"infantry","stats":{"hp":40,"attack":32,"speed":33,"defense":25,"resistance":18},"weapon":"Fujin Yumi"}}
 
 /***/ }),
 /* 2 */
@@ -142,7 +142,7 @@ const Text         = PIXI.Text;
 let app = null;
 let gameScene, gameOverScene, state;
 
-//Current turn, the turn progresses by one every time all player's have made their moves
+//Current turn, the turn progresses by one every time all players have made their moves
 let turn = 1;
 
 // Text-related objects and styles
@@ -501,139 +501,74 @@ function checkIfAllCharsMoved() {
 }
 
 keys.down.press = () => {
+    
+    //Cursor is targetting enemies, do nothing
     if(cursor.currentSprite === cursor.targetSprite) {
         return;
     }
     
-    if (cursor.position.y < __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].NUM_TILES-1 && (cursor.distanceLeft > 0 || cursor.isSelected === false)) {
-        cursor.currentSprite.y   += __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].TILESIZE;
-        cursor.position.y        += 1;
-    }
-    
-    if(cursor.isSelected && cursor.distanceLeft > 0) {
-        let pathArray = cursor.selectedCharacter.movingSpriteInfo.spritePath;
-        if(pathArray[0] && pathArray[pathArray.length-1].x === 0 && pathArray[pathArray.length-1].y === -__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME) {
-            cursor.distanceLeft++;
-            cursor.selectedCharacter.movingSpriteInfo.spritePath.pop();
-        }
-        else {
-            cursor.distanceLeft--;
-            cursor.selectedCharacter.movingSpriteInfo.spritePath.push({x:0, y:__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME})
-        }
-        changeMovementText();
-        
-    }
+    cursor.moveCursor(0, 1, activePlayer.selectedCharacter);
+    changeMovementText();
+
 };
 
 keys.up.press = () => {
-    //Cursor is targetting enemies
+    
+    //Cursor is targetting enemies, do nothing
     if(cursor.currentSprite === cursor.targetSprite) {
         return;
     }
+
+    cursor.moveCursor(0, -1, activePlayer.selectedCharacter);
     
-    if (cursor.position.y > 0 && (cursor.distanceLeft > 0 || cursor.isSelected === false)) {
-        cursor.currentSprite.y   -= __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].TILESIZE;
-        cursor.position.y        -= 1;
-        
-        //movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
-    }
+    changeMovementText();
     
-    if(cursor.isSelected && cursor.distanceLeft > 0) {
-        let pathArray = cursor.selectedCharacter.movingSpriteInfo.spritePath;
-        
-        //If last element of the pathArra
-        if(pathArray[0] && pathArray[pathArray.length-1].x === 0 && pathArray[pathArray.length-1].y === __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME) {
-            cursor.distanceLeft++;
-            cursor.selectedCharacter.movingSpriteInfo.spritePath.pop();
-        }
-        else {
-            cursor.distanceLeft--;
-            cursor.selectedCharacter.movingSpriteInfo.spritePath.push({x:0, y:-__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME})
-        }
-        changeMovementText();
-    }
 };
 
 //FIXME: Currently switching between multiple targets to attack is broken, need to fix
 
 keys.left.press = () => {
-    if(cursor.position.x > 0 && cursor.currentSprite === cursor.targetSprite) {
-        cursor.currentSprite.x  = cursor.targetArray[cursor.targetArrayIndex].sprite.position.x;
-        cursor.currentSprite.y  = cursor.targetArray[cursor.targetArrayIndex].sprite.position.y;
-        cursor.position.x       = cursor.targetArray[cursor.targetArrayIndex].position.x;
-        cursor.position.y       = cursor.targetArray[cursor.targetArrayIndex].position.y;
+    if(cursor.currentSprite === cursor.targetSprite) {
+        // cursor.currentSprite.x  = cursor.targetArray[cursor.targetArrayIndex].sprite.position.x;
+        // cursor.currentSprite.y  = cursor.targetArray[cursor.targetArrayIndex].sprite.position.y;
+        // cursor.position.x       = cursor.targetArray[cursor.targetArrayIndex].position.x;
+        // cursor.position.y       = cursor.targetArray[cursor.targetArrayIndex].position.y;
         
-        cursor.selectedCharacter = cursor.targetArray[cursor.targetArrayIndex];
+        // activePlayer.selectedCharacter = cursor.targetArray[cursor.targetArrayIndex];
         
-        console.log(cursor.selectedCharacter);
-        console.log(cursor.position);
         
-        if (cursor.targetArrayIndex === cursor.targetArray.length-1) cursor.targetArrayIndex = 0;
-        else cursor.targetArrayIndex++;
+        // if (cursor.targetArrayIndex === cursor.targetArray.length-1) cursor.targetArrayIndex = 0;
+        // else cursor.targetArrayIndex++;
+        
+        cursor.moveCursorAttacking(-1, activePlayer);
         
         return;
     }
     
-    if (cursor.position.x > 0 && (cursor.distanceLeft > 0 || cursor.isSelected === false)) {
-        cursor.currentSprite.x  -= __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].TILESIZE;
-        cursor.position.x       -= 1;
-        
-        //movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
-    }
-    
-    if(cursor.isSelected && cursor.distanceLeft > 0) {
-        let pathArray = cursor.selectedCharacter.movingSpriteInfo.spritePath;
-        if(pathArray[0] && pathArray[pathArray.length-1].x === __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME && pathArray[pathArray.length-1].y === 0) {
-            cursor.distanceLeft++;
-            cursor.selectedCharacter.movingSpriteInfo.spritePath.pop();
-        }
-        else {
-            cursor.distanceLeft--;
-            cursor.selectedCharacter.movingSpriteInfo.spritePath.push({x:-__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME, y:0})
-        }
-        changeMovementText();
-        
-    }
+    cursor.moveCursor(-1, 0, activePlayer.selectedCharacter);
+    changeMovementText();
 };
 
 keys.right.press = () => {
-    if(cursor.position.x < __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].NUM_TILES-1 && cursor.currentSprite === cursor.targetSprite) {
-        cursor.currentSprite.x  = cursor.targetArray[cursor.targetArrayIndex].sprite.position.x;
-        cursor.currentSprite.y  = cursor.targetArray[cursor.targetArrayIndex].sprite.position.y;
-        cursor.position.x       = cursor.targetArray[cursor.targetArrayIndex].position.x;
-        cursor.position.y       = cursor.targetArray[cursor.targetArrayIndex].position.y;
+    if(cursor.currentSprite === cursor.targetSprite) {
+        // cursor.currentSprite.x  = cursor.targetArray[cursor.targetArrayIndex].sprite.position.x;
+        // cursor.currentSprite.y  = cursor.targetArray[cursor.targetArrayIndex].sprite.position.y;
+        // cursor.position.x       = cursor.targetArray[cursor.targetArrayIndex].position.x;
+        // cursor.position.y       = cursor.targetArray[cursor.targetArrayIndex].position.y;
         
-        cursor.selectedCharacter = cursor.targetArray[cursor.targetArrayIndex];
+        // activePlayer.selectedCharacter = cursor.targetArray[cursor.targetArrayIndex];
         
-        console.log(cursor.selectedCharacter);
-        console.log(cursor.position);
         
-        if(cursor.targetArrayIndex === cursor.targetArray.length-1) cursor.targetArrayIndex = 0;
-        else cursor.targetArrayIndex++;
+        // if(cursor.targetArrayIndex === cursor.targetArray.length-1) cursor.targetArrayIndex = 0;
+        // else cursor.targetArrayIndex++;
+        
+        cursor.moveCursorAttacking(+1, activePlayer);
         
         return;
     }
     
-    if (cursor.position.x < __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].NUM_TILES-1 && (cursor.distanceLeft > 0 || cursor.isSelected === false)) {
-        cursor.currentSprite.x   += __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].TILESIZE;
-        cursor.position.x        += 1;
-        
-        //movesMessage.text = "Moves remaining: " + cursor.distanceLeft;
-    }
-    
-    if(cursor.isSelected && cursor.distanceLeft > 0) {
-        let pathArray = cursor.selectedCharacter.movingSpriteInfo.spritePath;
-        if(pathArray[0] && pathArray[pathArray.length-1].x === -__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME && pathArray[pathArray.length-1].y === 0) {
-            cursor.distanceLeft++;
-            cursor.selectedCharacter.movingSpriteInfo.spritePath.pop();
-        }
-        else {
-            cursor.distanceLeft--;
-            cursor.selectedCharacter.movingSpriteInfo.spritePath.push({x:__WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].PIXEL_PER_FRAME, y:0})
-        }
-        changeMovementText();
-        
-    }
+    cursor.moveCursor(1, 0, activePlayer.selectedCharacter);
+    changeMovementText();
 };
 
 // TODO : Sometimes the game doesn't let you select any character on the board,
@@ -676,7 +611,7 @@ keys.a.press = () => {
         // Make sure no character exists on this tile, and then place the character
         // on this tile after moving it
         if (!currentTile.character) {
-            currentTile.character = cursor.selectedCharacter.move(cursor);
+            currentTile.character = activePlayer.selectedCharacter.move(cursor);
             
             currentTile.character.desaturateSprite(PIXI);
             
@@ -727,7 +662,7 @@ keys.a.press = () => {
 
 keys.s.press = () => {
     // Reset the sprite path if the player changed their mind
-    cursor.selectedCharacter.movingSpriteInfo.spritePath = [];
+    activePlayer.selectedCharacter.movingSpriteInfo.spritePath = [];
     
     if (cursor.isSelected) {
         cursor.toggleSprites();
@@ -754,7 +689,7 @@ function selectCharacter(currentTile) {
     cursor.toggleSprites();
     
     // Save the character we just picked up into the cursor
-    cursor.selectedCharacter = currentTile.character;
+    activePlayer.selectedCharacter = currentTile.character;
     
     // Save the tile from which the character was moved from for future reference
     cursor.startingTile.x = cursor.position.x;
@@ -767,13 +702,11 @@ function selectCharacter(currentTile) {
 }
 
 function selectEnemyToAttack(currentTile) {
-    let initiator = cursor.selectedCharacter;
+    let initiator = activePlayer.selectedCharacter;
     let recipient = tiles[cursor.position.x][cursor.position.y].character;
     
     let status = initiator.attack(recipient);
     
-    //console.log("Recipient HP: " + recipient.currentHP);
-    //console.log("Initiator HP: " + initiator.currentHP);
     
     if (status === "recipient dies") {
         let opponentPlayer = (activePlayer === player1)
@@ -794,8 +727,10 @@ function selectEnemyToAttack(currentTile) {
         // Is this necessary too?
         gameScene.removeChild(recipient.sprite);
         
+        //No more character within the tile
         tiles[cursor.position.x][cursor.position.y].character = null;
         
+        //Remove the character from the player's lineup of characters
         opponentPlayer.characters.splice(recipientIndex, 1);
     }
     else if (status === "initiator dies") {
@@ -851,53 +786,23 @@ function selectEnemyToAttack(currentTile) {
 }
 
 function checkIfCanAttack() {
-    // Check if player is adjacent to any opponents
+    
+    //Update the list of tiles the character can interact with
+    activePlayer.selectedCharacter.updateInteractableTiles();
+    
     let adjacentEnemies = [];
     
     cursor.targetArray = [];
-    cursor.targetArrayIndex = 1;
+    cursor.targetArrayIndex = 0;
     
-    // First check if character exists in above tile (but not if we're in the top row)
-    // If character exists, make sure it is an enemy character
-    if (cursor.selectedCharacter.position.y !== 0) {
-        let characterInTileAbove = tiles[cursor.position.x][cursor.position.y-1].character;
-        
-        if (characterInTileAbove &&
-            (characterInTileAbove.playerNumber !== activePlayer.playerNumber)) {
-            adjacentEnemies.push(characterInTileAbove);
-            cursor.targetArray.push(characterInTileAbove);
+    //Loop through each tile, check if anything is in the tile
+    activePlayer.selectedCharacter.interactableTiles.forEach((tile) => {
+        let characterInTile = tiles[tile.x][tile.y].character;
+        if(characterInTile && characterInTile.playerNumber !== activePlayer.playerNumber) {
+            adjacentEnemies.push(characterInTile);
+            cursor.targetArray.push(characterInTile);
         }
-    }
-    
-    if (cursor.selectedCharacter.position.y !== __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].NUM_TILES-1) {
-        let characterInTileBelow = tiles[cursor.position.x][cursor.position.y+1].character;
-        
-        if (characterInTileBelow &&
-            (characterInTileBelow.playerNumber !== activePlayer.playerNumber)) {
-            adjacentEnemies.push(characterInTileBelow);
-            cursor.targetArray.push(characterInTileBelow);
-        }
-    }
-    
-    if (cursor.selectedCharacter.position.x !== __WEBPACK_IMPORTED_MODULE_7__constants_js__["a" /* default */].NUM_TILES-1) {
-        let characterInTileRight = tiles[cursor.position.x+1][cursor.position.y].character;
-        
-        if (characterInTileRight &&
-            (characterInTileRight.playerNumber !== activePlayer.playerNumber)) {
-            adjacentEnemies.push(characterInTileRight);
-            cursor.targetArray.push(characterInTileRight);
-        }  
-    }
-    
-    if (cursor.selectedCharacter.position.x !== 0) {
-        let characterInTileLeft = tiles[cursor.position.x-1][cursor.position.y].character;
-        
-        if (characterInTileLeft &&
-            (characterInTileLeft.playerNumber !== activePlayer.playerNumber)) {
-            adjacentEnemies.push(characterInTileLeft);
-            cursor.targetArray.push(characterInTileLeft);
-        }
-    }
+    })
     
     // At least one enemy found, switch to target mode
     if (adjacentEnemies[0]) {
@@ -924,6 +829,9 @@ function checkIfCanAttack() {
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__classes_Weapon_js__ = __webpack_require__(4);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__data_characters_json__ = __webpack_require__(1);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__data_characters_json___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__data_characters_json__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__constants_js__ = __webpack_require__(0);
+
+
 
 
 
@@ -968,6 +876,16 @@ class Character {
         }
         else if(this.movementType === "flier") {
             this.movement = 6;
+        }
+        
+        //An array of nearby tiles the unit can interact with. How far away a character can interact depends on their reach
+        this.interactableTiles;
+        this.reach;
+        if(this.weaponType === "sword" || this.weaponType === "lance" || this.weaponType === "axe") {
+            this.reach = 1;
+        }
+        if(this.weaponType === "bow") {
+            this.reach = 2;
         }
         
         //The sprite the character uses
@@ -1135,6 +1053,45 @@ class Character {
     }
     
     /**
+     * Every time a character moves, the interactable Tiles are updated based on the character's new position
+     * Each tile is pushed into the array, regardless if it is a valid tile
+     * Once all tiles are pushed, loop through the array and remove invalid (out of range) tiles
+     */
+    updateInteractableTiles() {
+        this.interactableTiles = [];
+        
+        //Characters with a reach of 1 can interact with tiles that are one space away vertically and horizontally
+        if(this.reach === 1) {
+            //Vertical & Horizontal Tiles 1 space away
+            this.interactableTiles.push({x:this.position.x+1, y:this.position.y})
+            this.interactableTiles.push({x:this.position.x-1, y:this.position.y})
+            this.interactableTiles.push({x:this.position.x, y:this.position.y+1})
+            this.interactableTiles.push({x:this.position.x, y:this.position.y-1})
+        }
+        
+        //Characters with a reach of 2 can interact with tiles that are one or two spaces away vertically and horizontally, and one space diagonally
+        else if(this.reach === 2) {
+            //Vertical & Horizontal Tiles 2 spaces away
+            this.interactableTiles.push({x:this.position.x+2, y:this.position.y})
+            this.interactableTiles.push({x:this.position.x-2, y:this.position.y})
+            this.interactableTiles.push({x:this.position.x, y:this.position.y+2})
+            this.interactableTiles.push({x:this.position.x, y:this.position.y-2})
+            
+            //Diagonal Tiles 1 space away
+            this.interactableTiles.push({x:this.position.x+1, y:this.position.y+1})
+            this.interactableTiles.push({x:this.position.x-1, y:this.position.y+1})
+            this.interactableTiles.push({x:this.position.x+1, y:this.position.y+1})
+            this.interactableTiles.push({x:this.position.x+1, y:this.position.y-1})
+        }
+        
+        this.interactableTiles.forEach((tile, index) => {
+            if(tile.x > __WEBPACK_IMPORTED_MODULE_2__constants_js__["a" /* default */].NUM_TILES-1 || tile.x < 0 || tile.y > __WEBPACK_IMPORTED_MODULE_2__constants_js__["a" /* default */].NUM_TILES-1 || tile.y < 0) {
+                this.interactableTiles.splice(index, 1);
+            }
+        });
+    }
+    
+    /**
      * 
      * @param {object} PIXI - Pixi object
      */
@@ -1205,7 +1162,7 @@ class Weapon {
 /* 5 */
 /***/ (function(module, exports) {
 
-module.exports = {"sword":[{"name":"Sol Katti","might":16},{"name":"Falchion","might":16}],"lance":[{"name":"Hinoka's Spear","might":16}],"axe":[{"name":"Steel Axe","might":8}]}
+module.exports = {"sword":[{"name":"Sol Katti","might":16},{"name":"Falchion","might":16}],"lance":[{"name":"Hinoka's Spear","might":16}],"axe":[{"name":"Steel Axe","might":8}],"bow":[{"name":"Fujin Yumi","might":14}]}
 
 /***/ }),
 /* 6 */
@@ -1240,8 +1197,15 @@ class Player {
     
     constructor(characters, color, playerNumber) {
         this.playerNumber = playerNumber;
+        
+        //Array of characters the player possesses 
         this.characters = characters;
+        
+        //The player's color
         this.color = color;
+        
+        //The character currently selected by the player
+        this.selectedCharacter = null;
         
         //Starting positions for Player 1's characters
         this.characterCoordinates1 = [
@@ -1302,7 +1266,6 @@ class Cursor {
         this.selectedSprite = null;
         this.targetSprite = null;
         
-        this.selectedCharacter = null;
         this.startingTile = {
             x: null,
             y: null
@@ -1315,9 +1278,7 @@ class Cursor {
         this.targetArray = [];
         this.targetArrayIndex = 0;
         
-        this.spritePath = [];
-        this.movedInSprite = 0;
-        this.spriteMoving = false;
+        this.trailSprites = [];
     }
     
     toggleSprites() {
@@ -1331,6 +1292,69 @@ class Cursor {
             this.position.x * __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].TILESIZE,
             this.position.y * __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].TILESIZE
         );
+    }
+    
+    moveCursor(x, y, selectedCharacter) {
+
+        //Move the cursor if the inputted direction does not send it out of the grid
+        if(this.position.x + x >= 0 &&
+        this.position.x + x <= __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].NUM_TILES-1 &&
+        this.position.y + y >= 0 &&
+        this.position.y + y <= __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].NUM_TILES-1) {
+            
+            this.position.x += x;
+            this.position.y += y;
+            
+            this.currentSprite.x += x*__WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].TILESIZE
+            this.currentSprite.y += y*__WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].TILESIZE
+        }
+        
+        //This stuff only gets executed if a character is currently selected
+        if(this.isSelected) {
+            let pathArray = selectedCharacter.movingSpriteInfo.spritePath;
+            
+            //If the cursor is moving backwards, remove the most recent move and add increment remaining distance
+            if(pathArray[0] &&
+            pathArray[pathArray.length-1].x === -x * __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].PIXEL_PER_FRAME &&
+            pathArray[pathArray.length-1].y === -y * __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].PIXEL_PER_FRAME) {
+                this.distanceLeft++;
+                selectedCharacter.movingSpriteInfo.spritePath.pop();
+            }
+            else {
+                this.distanceLeft--;
+                selectedCharacter.movingSpriteInfo.spritePath.push({x:x*__WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].PIXEL_PER_FRAME, y:y*__WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].PIXEL_PER_FRAME});
+                //If the player tries to move the cursor too far, reset cursor
+                if(this.distanceLeft < 0) {
+                    
+                    this.distanceLeft++;
+                    
+                    this.position.x -= x;
+                    this.position.y -= y;
+                    
+                    this.currentSprite.x -= x * __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].TILESIZE;
+                    this.currentSprite.y -= y * __WEBPACK_IMPORTED_MODULE_0__constants_js__["a" /* default */].TILESIZE;
+                    
+                    pathArray.pop();
+                }
+            }
+        }
+    }
+    
+    moveCursorAttacking(moveLeftRight, player) {
+        this.targetArrayIndex += moveLeftRight;
+        
+        if(this.targetArrayIndex > this.targetArray.length-1) this.targetArrayIndex = 0;
+        else if(this.targetArrayIndex < 0) this.targetArrayIndex = this.targetArray.length-1;
+        
+        this.currentSprite.x  = this.targetArray[this.targetArrayIndex].sprite.position.x;
+        this.currentSprite.y  = this.targetArray[this.targetArrayIndex].sprite.position.y;
+        this.position.x       = this.targetArray[this.targetArrayIndex].position.x;
+        this.position.y       = this.targetArray[this.targetArrayIndex].position.y;
+        
+        player.selectedCharacter = this.targetArray[this.targetArrayIndex];
+        
+
+
     }
 }
 /* harmony export (immutable) */ __webpack_exports__["a"] = Cursor;

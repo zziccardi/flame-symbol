@@ -49,6 +49,19 @@
       "resistance": 24
     },
     "weapon": "Hinoka's Spear"
+  },
+  
+  "Takumi": {
+    "weapon-type": "bow",
+    "movement-type": "infantry",
+    "stats": {
+      "hp": 40,
+      "attack": 32,
+      "speed": 33,
+      "defense": 25,
+      "resistance": 18
+    },
+    "weapon": "Fujin Yumi"
   }
 
 }

@@ -3,6 +3,8 @@ import Weapon from "../classes/Weapon.js";
 
 import charactersJSON from "../data/characters.json";
 
+import constants from "../constants.js";
+
 export default class Character {
     
     /**
@@ -42,6 +44,16 @@ export default class Character {
         }
         else if(this.movementType === "flier") {
             this.movement = 6;
+        }
+        
+        //An array of nearby tiles the unit can interact with. How far away a character can interact depends on their reach
+        this.interactableTiles;
+        this.reach;
+        if(this.weaponType === "sword" || this.weaponType === "lance" || this.weaponType === "axe") {
+            this.reach = 1;
+        }
+        if(this.weaponType === "bow") {
+            this.reach = 2;
         }
         
         //The sprite the character uses
@@ -206,6 +218,45 @@ export default class Character {
         }
         
         return 1;
+    }
+    
+    /**
+     * Every time a character moves, the interactable Tiles are updated based on the character's new position
+     * Each tile is pushed into the array, regardless if it is a valid tile
+     * Once all tiles are pushed, loop through the array and remove invalid (out of range) tiles
+     */
+    updateInteractableTiles() {
+        this.interactableTiles = [];
+        
+        //Characters with a reach of 1 can interact with tiles that are one space away vertically and horizontally
+        if(this.reach === 1) {
+            //Vertical & Horizontal Tiles 1 space away
+            this.interactableTiles.push({x:this.position.x+1, y:this.position.y})
+            this.interactableTiles.push({x:this.position.x-1, y:this.position.y})
+            this.interactableTiles.push({x:this.position.x, y:this.position.y+1})
+            this.interactableTiles.push({x:this.position.x, y:this.position.y-1})
+        }
+        
+        //Characters with a reach of 2 can interact with tiles that are one or two spaces away vertically and horizontally, and one space diagonally
+        else if(this.reach === 2) {
+            //Vertical & Horizontal Tiles 2 spaces away
+            this.interactableTiles.push({x:this.position.x+2, y:this.position.y})
+            this.interactableTiles.push({x:this.position.x-2, y:this.position.y})
+            this.interactableTiles.push({x:this.position.x, y:this.position.y+2})
+            this.interactableTiles.push({x:this.position.x, y:this.position.y-2})
+            
+            //Diagonal Tiles 1 space away
+            this.interactableTiles.push({x:this.position.x+1, y:this.position.y+1})
+            this.interactableTiles.push({x:this.position.x-1, y:this.position.y+1})
+            this.interactableTiles.push({x:this.position.x+1, y:this.position.y+1})
+            this.interactableTiles.push({x:this.position.x+1, y:this.position.y-1})
+        }
+        
+        this.interactableTiles.forEach((tile, index) => {
+            if(tile.x > constants.NUM_TILES-1 || tile.x < 0 || tile.y > constants.NUM_TILES-1 || tile.y < 0) {
+                this.interactableTiles.splice(index, 1);
+            }
+        });
     }
     
     /**
